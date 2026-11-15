@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/core/widgets/app_network_image.dart';
+import 'package:speakwise_mobile/core/widgets/app_shimmer.dart';
 import 'package:speakwise_mobile/features/explore/data/events_repository.dart';
 import 'package:speakwise_mobile/features/explore/data/models/event_model.dart';
 
@@ -39,6 +40,7 @@ class _AllSpeakersScreenState extends ConsumerState<AllSpeakersScreen> {
 
   String _searchQuery = '';
   String _selectedFilter = 'All';
+  bool _isNetworkFetching = false;
 
   final List<Map<String, String>> _filterOptions = const [
     {'label': 'All', 'ordering': '', 'top': 'false'},
@@ -84,6 +86,9 @@ class _AllSpeakersScreenState extends ConsumerState<AllSpeakersScreen> {
   }
 
   Future<void> _loadSpeakers({bool reset = false}) async {
+    if (_isNetworkFetching) return;
+    _isNetworkFetching = true;
+
     if (reset) {
       setState(() {
         _currentPage = 1;
@@ -122,10 +127,13 @@ class _AllSpeakersScreenState extends ConsumerState<AllSpeakersScreen> {
           _isLoading = false;
         });
       }
+    } finally {
+      _isNetworkFetching = false;
     }
   }
 
   Future<void> _loadMoreSpeakers() async {
+    if (_isLoadingMore || _isNetworkFetching || !_hasMore) return;
     setState(() => _isLoadingMore = true);
     final nextPage = _currentPage + 1;
 
@@ -364,12 +372,7 @@ class _AllSpeakersScreenState extends ConsumerState<AllSpeakersScreen> {
             // 4. Speakers Grid Body
             Expanded(
               child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: AppTheme.primaryAccent,
-                        strokeWidth: 2,
-                      ),
-                    )
+                  ? const SpeakersGridShimmer()
                   : displayList.isEmpty
                   ? _buildEmptyState()
                   : RefreshIndicator(

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/core/config/app_constants.dart';
 import 'package:speakwise_mobile/core/utils/event_logo_resolver.dart';
+import 'package:speakwise_mobile/core/widgets/app_shimmer.dart';
 import 'package:speakwise_mobile/core/widgets/user_avatar.dart';
 import 'package:speakwise_mobile/features/profile/profile.dart';
 
@@ -31,6 +32,7 @@ class _SpeakerProfileDetailsScreenState
     extends ConsumerState<SpeakerProfileDetailsScreen> {
   bool _isFavorited = false;
   bool _isFollowing = false;
+  bool _hasSyncedFollowing = false;
 
   void _onRequestSpeaker(UserProfile profile) {
     HapticFeedback.mediumImpact();
@@ -208,9 +210,7 @@ class _SpeakerProfileDetailsScreenState
       body: SafeArea(
         bottom: false,
         child: profileAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(color: AppTheme.primaryAccent),
-          ),
+          loading: () => const SpeakerProfileShimmer(),
           error: (err, _) => Center(
             child: Text(
               'Error loading speaker profile',
@@ -218,6 +218,10 @@ class _SpeakerProfileDetailsScreenState
             ),
           ),
           data: (profile) {
+            if (!_hasSyncedFollowing) {
+              _isFollowing = profile.isFollowing;
+              _hasSyncedFollowing = true;
+            }
             final displayName = profile.fullName.isNotEmpty
                 ? profile.fullName
                 : (profile.firstName.isNotEmpty
@@ -362,11 +366,56 @@ class _SpeakerProfileDetailsScreenState
                                     top: 18,
                                     right: 18,
                                     child: GestureDetector(
-                                      onTap: () {
+                                      onTap: () async {
                                         HapticFeedback.lightImpact();
+                                        final previous = _isFollowing;
                                         setState(
-                                          () => _isFollowing = !_isFollowing,
+                                          () => _isFollowing = !previous,
                                         );
+                                        try {
+                                          final newStatus = await ref
+                                              .read(profileRepositoryProvider)
+                                              .toggleFollowSpeaker(widget.speakerId);
+                                          if (mounted) {
+                                            setState(() => _isFollowing = newStatus);
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  newStatus
+                                                      ? 'Following $displayName'
+                                                      : 'Unfollowed $displayName',
+                                                  style: AppTheme.font(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                backgroundColor: const Color(0xFF1B1D1F),
+                                                duration: const Duration(seconds: 2),
+                                                behavior: SnackBarBehavior.floating,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        } catch (e) {
+                                          if (mounted) {
+                                            setState(() => _isFollowing = previous);
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Failed to update follow status: $e',
+                                                  style: AppTheme.font(color: Colors.white),
+                                                ),
+                                                backgroundColor: AppTheme.errorRed,
+                                                behavior: SnackBarBehavior.floating,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(12),
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
                                       },
                                       child: Container(
                                         width: 38,
@@ -879,17 +928,11 @@ class _SpeakerProfileDetailsScreenState
             ),
           );
         },
-        placeholder: (context, url) => Container(
-          color: const Color(0xFF1B1E16),
-          child: const Center(
-            child: SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 1.5,
-                color: AppTheme.primaryAccent,
-              ),
-            ),
+        placeholder: (context, url) => const AppShimmer(
+          child: ShimmerBox(
+            width: double.infinity,
+            height: double.infinity,
+            borderRadius: 0,
           ),
         ),
         errorWidget: (context, url, error) => Image.network(

@@ -118,6 +118,50 @@ class ApiClient {
     return Uri.parse(fullUrl).replace(queryParameters: queryMap);
   }
 
+  bool _isRefreshing = false;
+  final Map<String, Future<dynamic>> _inFlightGetRequests = {};
+
+  Future<bool> _tryRefreshToken() async {
+    final refresh = storageService.refreshToken;
+    if (refresh == null || refresh.isEmpty) return false;
+    if (_isRefreshing) return false;
+
+    _isRefreshing = true;
+    try {
+      final uri = _buildUri('/users/auth/token/refresh/');
+      final response = await _client
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: jsonEncode({'refresh': refresh}),
+          )
+          .timeout(AppConstants.connectTimeout);
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final dynamic json = jsonDecode(response.body);
+        if (json is Map) {
+          final newAccess = json['access']?.toString() ??
+              json['access_token']?.toString() ??
+              json['token']?.toString();
+          if (newAccess != null && newAccess.isNotEmpty) {
+            await storageService.setAuthToken(newAccess);
+            final newRefresh = json['refresh']?.toString() ?? json['refresh_token']?.toString();
+            if (newRefresh != null && newRefresh.isNotEmpty) {
+              await storageService.setRefreshToken(newRefresh);
+            }
+            debugPrint('🔄 JWT access token successfully refreshed');
+            return true;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Token refresh attempt notice: $e');
+    } finally {
+      _isRefreshing = false;
+    }
+    return false;
+  }
+
   Future<dynamic> get(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -125,12 +169,48 @@ class ApiClient {
     Map<String, String>? headers,
   }) async {
     final uri = _buildUri(path, queryParameters);
+    final requestKey = 'GET:${uri.toString()}:$authenticated';
+
+    if (_inFlightGetRequests.containsKey(requestKey)) {
+      debugPrint('⚡ Coalescing concurrent in-flight GET request: $requestKey');
+      return await _inFlightGetRequests[requestKey]!;
+    }
+
+    final future = _executeGet(
+      uri,
+      authenticated: authenticated,
+      headers: headers,
+    );
+    _inFlightGetRequests[requestKey] = future;
+    try {
+      return await future;
+    } finally {
+      _inFlightGetRequests.remove(requestKey);
+    }
+  }
+
+  Future<dynamic> _executeGet(
+    Uri uri, {
+    required bool authenticated,
+    Map<String, String>? headers,
+  }) async {
     try {
       final response = await _client
           .get(uri, headers: _buildHeaders(authenticated: authenticated, customHeaders: headers))
           .timeout(AppConstants.receiveTimeout);
 
       return _processResponse(response);
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 && authenticated && storageService.refreshToken != null && storageService.refreshToken!.isNotEmpty) {
+        final refreshed = await _tryRefreshToken();
+        if (refreshed) {
+          final retryRes = await _client
+              .get(uri, headers: _buildHeaders(authenticated: authenticated, customHeaders: headers))
+              .timeout(AppConstants.receiveTimeout);
+          return _processResponse(retryRes);
+        }
+      }
+      rethrow;
     } on SocketException catch (e) {
       throw ApiException(
         statusCode: 0,
@@ -159,6 +239,21 @@ class ApiClient {
           .timeout(AppConstants.connectTimeout);
 
       return _processResponse(response);
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 && authenticated && storageService.refreshToken != null && storageService.refreshToken!.isNotEmpty) {
+        final refreshed = await _tryRefreshToken();
+        if (refreshed) {
+          final retryRes = await _client
+              .post(
+                uri,
+                headers: _buildHeaders(authenticated: authenticated, customHeaders: headers),
+                body: body != null ? jsonEncode(body) : null,
+              )
+              .timeout(AppConstants.connectTimeout);
+          return _processResponse(retryRes);
+        }
+      }
+      rethrow;
     } on SocketException catch (e) {
       throw ApiException(
         statusCode: 0,
@@ -187,6 +282,21 @@ class ApiClient {
           .timeout(AppConstants.connectTimeout);
 
       return _processResponse(response);
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 && authenticated && storageService.refreshToken != null && storageService.refreshToken!.isNotEmpty) {
+        final refreshed = await _tryRefreshToken();
+        if (refreshed) {
+          final retryRes = await _client
+              .patch(
+                uri,
+                headers: _buildHeaders(authenticated: authenticated, customHeaders: headers),
+                body: body != null ? jsonEncode(body) : null,
+              )
+              .timeout(AppConstants.connectTimeout);
+          return _processResponse(retryRes);
+        }
+      }
+      rethrow;
     } on SocketException catch (e) {
       throw ApiException(
         statusCode: 0,
@@ -210,6 +320,17 @@ class ApiClient {
           .timeout(AppConstants.connectTimeout);
 
       return _processResponse(response);
+    } on ApiException catch (e) {
+      if (e.statusCode == 401 && authenticated && storageService.refreshToken != null && storageService.refreshToken!.isNotEmpty) {
+        final refreshed = await _tryRefreshToken();
+        if (refreshed) {
+          final retryRes = await _client
+              .delete(uri, headers: _buildHeaders(authenticated: authenticated, customHeaders: headers))
+              .timeout(AppConstants.connectTimeout);
+          return _processResponse(retryRes);
+        }
+      }
+      rethrow;
     } on SocketException catch (e) {
       throw ApiException(
         statusCode: 0,

@@ -13,6 +13,7 @@ abstract class ProfileRepository {
     required String location,
     required String message,
   });
+  Future<bool> toggleFollowSpeaker(String slugOrId);
 }
 
 class DjangoProfileRepositoryImpl implements ProfileRepository {
@@ -194,5 +195,10 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
       debugPrint('Django speaker email request note: $e');
       rethrow;
     }
+  }
+
+  @override
+  Future<bool> toggleFollowSpeaker(String slugOrId) async {
+    return await remoteDataSource.toggleFollowSpeaker(slugOrId);
   }
 }

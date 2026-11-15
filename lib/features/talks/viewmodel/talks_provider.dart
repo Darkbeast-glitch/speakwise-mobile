@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speakwise_mobile/core/services/cache_manager.dart';
 import 'package:speakwise_mobile/features/talks/data/talks_remote_datasource.dart';
 import 'package:speakwise_mobile/features/talks/data/talks_repository.dart';
 import 'package:speakwise_mobile/features/talks/viewmodel/talks_state.dart';
@@ -15,5 +16,6 @@ final talksRepositoryProvider = Provider<TalksRepository>((ref) {
 final talksViewModelProvider =
     StateNotifierProvider<TalksViewModel, TalksState>((ref) {
   final repository = ref.watch(talksRepositoryProvider);
-  return TalksViewModel(repository);
+  final cacheManager = ref.watch(cacheManagerProvider);
+  return TalksViewModel(repository, cacheManager);
 });

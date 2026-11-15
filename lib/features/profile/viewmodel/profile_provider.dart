@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:speakwise_mobile/core/services/cache_manager.dart';
 import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/features/profile/data/models/user_profile_model.dart';
 import 'package:speakwise_mobile/features/profile/data/profile_remote_datasource.dart';
@@ -18,7 +19,8 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
 final profileViewModelProvider =
     StateNotifierProvider<ProfileViewModel, ProfileState>((ref) {
   final repository = ref.watch(profileRepositoryProvider);
-  return ProfileViewModel(repository);
+  final cacheManager = ref.watch(cacheManagerProvider);
+  return ProfileViewModel(repository, cacheManager);
 });
 
 final speakerProfileProvider =

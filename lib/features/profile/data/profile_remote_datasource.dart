@@ -15,6 +15,7 @@ abstract class ProfileRemoteDataSource {
     required String message,
   });
   Future<UserProfile> updateSpeakerProfile(UserProfile profile);
+  Future<bool> toggleFollowSpeaker(String slugOrId);
 }
 
 class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
@@ -264,6 +265,9 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
       reputationScore: reputationScore,
       rankTier: rankTier,
       totalReviews: totalReviews,
+      isFollowing: json['is_following'] == true ||
+          json['is_followed'] == true ||
+          json['following'] == true,
     );
   }
 
@@ -491,6 +495,40 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
   @override
   Future<UserProfile> updateSpeakerProfile(UserProfile profile) async {
     return profile;
+  }
+
+  @override
+  Future<bool> toggleFollowSpeaker(String slugOrId) async {
+    try {
+      final res = await apiClient.post(
+        '/speakers/$slugOrId/follow/',
+        authenticated: true,
+      );
+      if (res is Map) {
+        if (res.containsKey('following')) return res['following'] == true;
+        if (res.containsKey('is_following')) return res['is_following'] == true;
+        if (res.containsKey('status')) {
+          final s = res['status']?.toString().toLowerCase();
+          return s == 'followed' || s == 'following';
+        }
+      }
+      return true;
+    } on ApiException catch (e) {
+      if (e.statusCode == 404 || e.statusCode == 405) {
+        try {
+          final altRes = await apiClient.post(
+            '/speakers/$slugOrId/toggle-follow/',
+            authenticated: true,
+          );
+          if (altRes is Map) {
+            if (altRes.containsKey('following')) return altRes['following'] == true;
+            if (altRes.containsKey('is_following')) return altRes['is_following'] == true;
+          }
+          return true;
+        } catch (_) {}
+      }
+      rethrow;
+    }
   }
 }
 

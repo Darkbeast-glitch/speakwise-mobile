@@ -79,8 +79,10 @@ class StorageService {
 
   bool get isGuest => _prefs.getBool(AppConstants.keyIsGuest) ?? false;
 
-  bool get isAuthenticated =>
-      (authToken != null && authToken!.isNotEmpty) || isGuest;
+  bool get isAuthenticated {
+    final token = authToken?.trim();
+    return (token != null && token.isNotEmpty && token != 'null') || isGuest;
+  }
 
   Future<void> setIsGuest(bool value) async {
     await _prefs.setBool(AppConstants.keyIsGuest, value);

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/core/config/app_constants.dart';
+import 'package:speakwise_mobile/core/widgets/app_shimmer.dart';
 
 /// ═══════════════════════════════════════════════════════════════
 /// AppNetworkImage Component
@@ -52,19 +53,11 @@ class AppNetworkImage extends StatelessWidget {
 
   Widget _buildLoadingIndicator() {
     return placeholder ??
-        Container(
-          width: width,
-          height: height,
-          color: const Color(0xFF1B1E16),
-          child: const Center(
-            child: SizedBox(
-              width: 22,
-              height: 22,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppTheme.primaryAccent,
-              ),
-            ),
+        AppShimmer(
+          child: ShimmerBox(
+            width: width ?? double.infinity,
+            height: height ?? double.infinity,
+            customBorderRadius: borderRadius,
           ),
         );
   }

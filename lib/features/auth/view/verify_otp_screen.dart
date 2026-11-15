@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/core/services/api_client.dart';
+import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/core/widgets/ambient_glow.dart';
 import 'package:speakwise_mobile/features/auth/data/auth_remote_datasource.dart';
 
@@ -58,6 +59,7 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
             backgroundColor: AppTheme.primaryAccent,
           ),
         );
+        await ref.read(storageServiceProvider).setHasSeenOnboarding(true);
         context.go('/shell');
       }
     } catch (e) {

@@ -84,6 +84,71 @@ class EventItem {
     }
     return '$loc, $c';
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'location': location,
+      'date': date,
+      'imagePath': imagePath,
+      'dateBadgeMonth': dateBadgeMonth,
+      'dateBadgeDay': dateBadgeDay,
+      'isTicketed': isTicketed,
+      'description': description,
+      'bannerSubtitle': bannerSubtitle,
+      'categoryId': categoryId,
+      'ticketPrice': ticketPrice,
+      'speakers': speakers.map((s) => s.toJson()).toList(),
+      'time': time,
+      'attendeeCount': attendeeCount,
+      'subtitle': subtitle,
+      'slug': slug,
+      'country': country,
+      'isFree': isFree,
+      'isFeatured': isFeatured,
+      'cfpOpen': cfpOpen,
+      'startDateTime': startDateTime?.toIso8601String(),
+      'endDateTime': endDateTime?.toIso8601String(),
+      'website': website,
+    };
+  }
+
+  factory EventItem.fromJson(Map<String, dynamic> json) {
+    return EventItem(
+      id: json['id']?.toString() ?? '',
+      title: json['title']?.toString() ?? '',
+      location: json['location']?.toString() ?? '',
+      date: json['date']?.toString() ?? '',
+      imagePath: json['imagePath']?.toString() ?? '',
+      dateBadgeMonth: json['dateBadgeMonth']?.toString(),
+      dateBadgeDay: json['dateBadgeDay']?.toString(),
+      isTicketed: json['isTicketed'] == true,
+      description: json['description']?.toString() ?? '',
+      bannerSubtitle: json['bannerSubtitle']?.toString() ?? '',
+      categoryId: json['categoryId']?.toString() ?? 'all',
+      ticketPrice: json['ticketPrice']?.toString() ?? '',
+      speakers: (json['speakers'] as List?)
+              ?.map((s) => EventSpeaker.fromJson(s as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      time: json['time']?.toString() ?? '',
+      attendeeCount: json['attendeeCount']?.toString() ?? '',
+      subtitle: json['subtitle']?.toString() ?? '',
+      slug: json['slug']?.toString(),
+      country: json['country']?.toString(),
+      isFree: json['isFree'] as bool?,
+      isFeatured: json['isFeatured'] == true,
+      cfpOpen: json['cfpOpen'] == true,
+      startDateTime: json['startDateTime'] != null
+          ? DateTime.tryParse(json['startDateTime'].toString())
+          : null,
+      endDateTime: json['endDateTime'] != null
+          ? DateTime.tryParse(json['endDateTime'].toString())
+          : null,
+      website: json['website']?.toString(),
+    );
+  }
 }
 
 class EventSpeaker {
@@ -118,6 +183,44 @@ class EventSpeaker {
     this.slug,
     this.badgesCount = 5,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'role': role,
+      'avatarPath': avatarPath,
+      'rating': rating,
+      'talksGiven': talksGiven,
+      'badge': badge,
+      'topic': topic,
+      'reputationScore': reputationScore,
+      'totalReviews': totalReviews,
+      'rankTier': rankTier,
+      'username': username,
+      'slug': slug,
+      'badgesCount': badgesCount,
+    };
+  }
+
+  factory EventSpeaker.fromJson(Map<String, dynamic> json) {
+    return EventSpeaker(
+      id: json['id']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      role: json['role']?.toString() ?? '',
+      avatarPath: json['avatarPath']?.toString() ?? '',
+      rating: (json['rating'] as num?)?.toDouble() ?? 4.9,
+      talksGiven: (json['talksGiven'] as num?)?.toInt() ?? 0,
+      badge: json['badge']?.toString() ?? 'Top Speaker',
+      topic: json['topic']?.toString() ?? '',
+      reputationScore: (json['reputationScore'] as num?)?.toDouble(),
+      totalReviews: (json['totalReviews'] as num?)?.toInt(),
+      rankTier: json['rankTier']?.toString(),
+      username: json['username']?.toString(),
+      slug: json['slug']?.toString(),
+      badgesCount: (json['badgesCount'] as num?)?.toInt() ?? 5,
+    );
+  }
 }
 
 class TrendingSession {

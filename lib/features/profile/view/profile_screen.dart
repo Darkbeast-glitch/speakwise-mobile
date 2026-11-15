@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:speakwise_mobile/app/router.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/core/widgets/widgets.dart';
@@ -32,7 +33,7 @@ class ProfileScreen extends ConsumerWidget {
             color: AppTheme.primaryAccent,
             backgroundColor: AppTheme.surfaceDark,
             onRefresh: () async {
-              await ref.read(profileViewModelProvider.notifier).loadProfile();
+              await ref.read(profileViewModelProvider.notifier).loadProfile(force: true);
             },
             child: ListView(
               physics: const AlwaysScrollableScrollPhysics(
@@ -1055,6 +1056,7 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               await ref.read(authRemoteDataSourceProvider).logout();
+              ref.invalidate(routerProvider);
               if (context.mounted) {
                 context.go('/auth');
               }

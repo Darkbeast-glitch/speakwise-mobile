@@ -101,7 +101,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
           color: AppTheme.primaryAccent,
           backgroundColor: AppTheme.surfaceDark,
           onRefresh: () async {
-            await ref.read(exploreViewModelProvider.notifier).loadExploreFeed();
+            await ref.read(exploreViewModelProvider.notifier).loadExploreFeed(force: true);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(
@@ -209,14 +209,9 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                     ),
                   ),
                   if (exploreState.isSearching) ...[
-                    const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40),
-                      child: Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppTheme.primaryAccent,
-                        ),
-                      ),
+                    const SizedBox(
+                      height: 260,
+                      child: EventsListShimmer(),
                     ),
                   ] else if (exploreState.searchResults.isEmpty) ...[
                     Padding(

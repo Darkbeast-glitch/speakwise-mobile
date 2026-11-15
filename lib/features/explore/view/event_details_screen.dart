@@ -166,9 +166,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
         backgroundColor: AppTheme.bgDark,
         body: SafeArea(
           child: _isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppTheme.primaryAccent),
-                )
+              ? const EventDetailsShimmer()
               : Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,

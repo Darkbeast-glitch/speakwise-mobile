@@ -57,6 +57,7 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
   }
 
   Future<void> _loadEvents() async {
+    if (_isLoading) return;
     setState(() => _isLoading = true);
     try {
       final repo = ref.read(eventsRepositoryProvider);
@@ -300,12 +301,7 @@ class _AllEventsScreenState extends ConsumerState<AllEventsScreen> {
             // 4. Events List or Empty / Loading State
             Expanded(
               child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppTheme.primaryAccent,
-                      ),
-                    )
+                  ? const EventsListShimmer()
                   : _events.isEmpty
                   ? Center(
                       child: Column(

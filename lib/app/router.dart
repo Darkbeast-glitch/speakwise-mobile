@@ -15,12 +15,32 @@ final routerProvider = Provider<GoRouter>((ref) {
   final hasSeenOnboarding = storage.hasSeenOnboarding;
   final isAuthenticated = storage.isAuthenticated;
 
-  final initialLocation = !hasSeenOnboarding
-      ? '/onboarding'
-      : (!isAuthenticated ? '/auth' : '/shell');
+  // 1. Logged in users always start directly in /shell
+  // 2. First-time installs see /onboarding
+  // 3. Logged-out returning users see /auth
+  final initialLocation = isAuthenticated
+      ? '/shell'
+      : (!hasSeenOnboarding ? '/onboarding' : '/auth');
 
   return GoRouter(
     initialLocation: initialLocation,
+    redirect: (context, state) {
+      final isAuth = storage.isAuthenticated;
+      final path = state.uri.path;
+      final isAuthRoute = path.startsWith('/auth') || path == '/onboarding';
+
+      // If user is already authenticated, keep them in /shell
+      if (isAuth && isAuthRoute) {
+        return '/shell';
+      }
+
+      // If user is not authenticated, protect authenticated areas
+      if (!isAuth && (path == '/shell' || path.startsWith('/profile/edit'))) {
+        return storage.hasSeenOnboarding ? '/auth' : '/onboarding';
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/onboarding',

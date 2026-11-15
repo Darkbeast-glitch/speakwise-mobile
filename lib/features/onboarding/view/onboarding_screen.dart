@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
+import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/core/widgets/ambient_glow.dart';
 import 'package:speakwise_mobile/core/widgets/app_button.dart';
 import 'package:speakwise_mobile/core/widgets/skip_button.dart';
@@ -52,7 +53,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   void _finishOnboarding() async {
     await ref.read(onboardingViewModelProvider.notifier).completeOnboarding();
     if (mounted) {
-      context.go('/auth');
+      final isAuth = ref.read(storageServiceProvider).isAuthenticated;
+      context.go(isAuth ? '/shell' : '/auth');
     }
   }
 

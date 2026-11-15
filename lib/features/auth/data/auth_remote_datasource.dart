@@ -31,18 +31,47 @@ class AuthResponse {
     String? slug;
     if (json['profile'] is Map && json['profile']['speaker_profile'] is Map) {
       slug = json['profile']['speaker_profile']['slug']?.toString();
+    } else if (json['speaker_profile'] is Map) {
+      slug = json['speaker_profile']['slug']?.toString();
+    } else if (json['speaker_slug'] != null) {
+      slug = json['speaker_slug']?.toString();
     }
 
+    final token = json['access_token']?.toString() ??
+        json['access']?.toString() ??
+        json['token']?.toString() ??
+        json['key']?.toString() ??
+        (json['tokens'] is Map ? json['tokens']['access']?.toString() : null) ??
+        (json['data'] is Map
+            ? (json['data']['access_token']?.toString() ??
+                json['data']['access']?.toString() ??
+                json['data']['token']?.toString())
+            : null) ??
+        '';
+
+    final refresh = json['refresh_token']?.toString() ??
+        json['refresh']?.toString() ??
+        (json['tokens'] is Map ? json['tokens']['refresh']?.toString() : null) ??
+        (json['data'] is Map
+            ? (json['data']['refresh_token']?.toString() ??
+                json['data']['refresh']?.toString())
+            : null) ??
+        '';
+
+    final userObj = json['user'] is Map ? json['user'] as Map<String, dynamic> : null;
+
     return AuthResponse(
-      id: json['id']?.toString() ?? '',
-      email: json['email']?.toString() ?? '',
-      firstName: json['first_name']?.toString() ?? '',
-      lastName: json['last_name']?.toString() ?? '',
-      username: json['username']?.toString() ?? '',
-      nationality: json['nationality']?.toString(),
-      speakerId: json['speaker_id']?.toString(),
-      accessToken: json['access_token']?.toString() ?? '',
-      refreshToken: json['refresh_token']?.toString() ?? '',
+      id: json['id']?.toString() ?? userObj?['id']?.toString() ?? '',
+      email: json['email']?.toString() ?? userObj?['email']?.toString() ?? '',
+      firstName: json['first_name']?.toString() ?? userObj?['first_name']?.toString() ?? '',
+      lastName: json['last_name']?.toString() ?? userObj?['last_name']?.toString() ?? '',
+      username: json['username']?.toString() ?? userObj?['username']?.toString() ?? '',
+      nationality: json['nationality']?.toString() ?? userObj?['nationality']?.toString(),
+      speakerId: json['speaker_id']?.toString() ??
+          (json['speaker_profile'] is Map ? json['speaker_profile']['id']?.toString() : null) ??
+          userObj?['speaker_id']?.toString(),
+      accessToken: token,
+      refreshToken: refresh,
       speakerSlug: slug,
     );
   }
@@ -96,6 +125,7 @@ abstract class AuthRemoteDataSource {
     required String newPassword,
   });
   Future<void> logout();
+  Future<bool> validateSession();
 }
 
 class DjangoAuthRemoteDataSource implements AuthRemoteDataSource {
@@ -142,6 +172,7 @@ class DjangoAuthRemoteDataSource implements AuthRemoteDataSource {
       await storageService.setSpeakerSlug(auth.speakerSlug!);
     }
     await storageService.setIsGuest(false);
+    await storageService.setHasSeenOnboarding(true);
 
     return auth;
   }
@@ -253,6 +284,70 @@ class DjangoAuthRemoteDataSource implements AuthRemoteDataSource {
     } finally {
       await storageService.clearAuth();
     }
+  }
+
+  @override
+  Future<bool> validateSession() async {
+    final token = storageService.authToken;
+    if (token == null || token.isEmpty) return false;
+    if (storageService.isGuest) return true;
+
+    try {
+      final res = await apiClient.get('/users/me/', authenticated: true);
+      if (res is Map<String, dynamic>) {
+        if (res['id'] != null) {
+          await storageService.setUserId(res['id'].toString());
+        }
+        if (res['email'] != null) {
+          await storageService.setUserEmail(res['email'].toString());
+        }
+        if (res['username'] != null) {
+          await storageService.setUsername(res['username'].toString());
+        }
+        if (res['first_name'] != null && res['first_name'].toString().isNotEmpty) {
+          await storageService.setFirstName(res['first_name'].toString());
+        }
+        if (res['last_name'] != null && res['last_name'].toString().isNotEmpty) {
+          await storageService.setLastName(res['last_name'].toString());
+        }
+        final spSlug = res['speaker_slug']?.toString() ??
+            (res['speaker_profile'] is Map ? res['speaker_profile']['slug']?.toString() : null);
+        if (spSlug != null && spSlug.isNotEmpty) {
+          await storageService.setSpeakerSlug(spSlug);
+        }
+        return true;
+      }
+    } on ApiException catch (e) {
+      if (e.statusCode == 401) {
+        // Try refresh token once
+        final refresh = storageService.refreshToken;
+        if (refresh != null && refresh.isNotEmpty) {
+          try {
+            final refreshRes = await apiClient.post(
+              '/users/auth/token/refresh/',
+              authenticated: false,
+              body: {'refresh': refresh},
+            );
+            if (refreshRes is Map<String, dynamic>) {
+              final newAccess = refreshRes['access']?.toString() ??
+                  refreshRes['access_token']?.toString() ??
+                  refreshRes['token']?.toString();
+              if (newAccess != null && newAccess.isNotEmpty) {
+                await storageService.setAuthToken(newAccess);
+                return true;
+              }
+            }
+          } catch (_) {}
+        }
+        // Permanently expired or revoked session
+        await storageService.clearAuth();
+        return false;
+      }
+    } catch (e) {
+      // Offline / network failure: keep user logged in with cached credentials
+      return true;
+    }
+    return true;
   }
 }
 

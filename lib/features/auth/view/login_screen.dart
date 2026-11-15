@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
+import 'package:speakwise_mobile/app/router.dart';
 import 'package:speakwise_mobile/core/services/api_client.dart';
 import 'package:speakwise_mobile/core/widgets/widgets.dart';
 import 'package:speakwise_mobile/features/auth/auth.dart';
@@ -21,8 +22,8 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _emailController = TextEditingController(text: "bbjulius4@gmail.com");
-  final _passwordController = TextEditingController(text: "#3Ewoksss1\$@123");
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -98,6 +99,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
         ref.invalidate(talksViewModelProvider);
         ref.invalidate(profileViewModelProvider);
+        ref.invalidate(routerProvider);
         context.go('/shell');
       }
     } catch (e) {
@@ -207,7 +209,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     onPressed: _isLoading
                         ? null
                         : () {
-                            setState(() => _obscurePassword = !_obscurePassword);
+                            setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            );
                           },
                   ),
                 ),

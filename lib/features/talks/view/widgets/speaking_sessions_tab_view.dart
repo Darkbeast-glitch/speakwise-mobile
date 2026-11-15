@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
+import 'package:speakwise_mobile/core/widgets/app_shimmer.dart';
 import 'package:speakwise_mobile/features/talks/data/models/talk_model.dart';
 import 'package:speakwise_mobile/features/talks/view/widgets/add_talk_modal.dart';
 import 'package:speakwise_mobile/features/talks/view/widgets/talk_qr_code_modal.dart';
@@ -24,7 +25,7 @@ class SpeakingSessionsTabView extends ConsumerWidget {
     return RefreshIndicator(
       color: AppTheme.primaryAccent,
       backgroundColor: const Color(0xFF141611),
-      onRefresh: () => ref.read(talksViewModelProvider.notifier).loadTalksData(),
+      onRefresh: () => ref.read(talksViewModelProvider.notifier).loadTalksData(force: true),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
         padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
@@ -132,30 +133,7 @@ class SpeakingSessionsTabView extends ConsumerWidget {
 
           // 3. Speaking Sessions Cards or Clean Empty State
           if (talksState.status == TalksStatus.loading && talks.isEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
-              alignment: Alignment.center,
-              child: Column(
-                children: [
-                  const SizedBox(
-                    width: 28,
-                    height: 28,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: AppTheme.primaryAccent,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Loading speaking experiences...',
-                    style: AppTheme.font(
-                      color: AppTheme.textMuted,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            )
+            const SpeakingSessionsListShimmer()
           else if (talksState.status == TalksStatus.error && talks.isEmpty)
             Container(
               padding: const EdgeInsets.all(24),
