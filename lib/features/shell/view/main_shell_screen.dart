@@ -22,13 +22,6 @@ class MainShellScreen extends StatefulWidget {
 class _MainShellScreenState extends State<MainShellScreen> {
   late int _currentIndex;
 
-  final List<Widget> _pages = const [
-    ExploreScreen(),
-    ScannerScreen(),
-    TalksScreen(),
-    ProfileScreen(),
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -50,7 +43,12 @@ class _MainShellScreenState extends State<MainShellScreen> {
           // 1. IndexedStack preserves state across tabs
           IndexedStack(
             index: _currentIndex,
-            children: _pages,
+            children: [
+              const ExploreScreen(),
+              ScannerScreen(isActive: _currentIndex == 1),
+              const TalksScreen(),
+              const ProfileScreen(),
+            ],
           ),
 
           // 2. Floating Centered Pill Navigation Bar
@@ -107,7 +105,7 @@ class _FloatingNavBar extends StatelessWidget {
           children: [
             _buildTabItem(0, Icons.explore_rounded, 'Explore'),
             const SizedBox(width: 6),
-            _buildTabItem(1, Icons.search_rounded, 'Discover'),
+            _buildTabItem(1, Icons.qr_code_scanner_rounded, 'Scan'),
             const SizedBox(width: 6),
             _buildTabItem(2, Icons.mic_none_rounded, 'Talks'),
             const SizedBox(width: 6),

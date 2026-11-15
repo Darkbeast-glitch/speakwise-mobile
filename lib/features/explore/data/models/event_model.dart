@@ -95,6 +95,12 @@ class EventSpeaker {
   final int talksGiven;
   final String badge;
   final String topic;
+  final double? reputationScore;
+  final int? totalReviews;
+  final String? rankTier;
+  final String? username;
+  final String? slug;
+  final int badgesCount;
 
   const EventSpeaker({
     required this.id,
@@ -105,6 +111,12 @@ class EventSpeaker {
     this.talksGiven = 12,
     this.badge = 'Top Speaker',
     this.topic = '',
+    this.reputationScore,
+    this.totalReviews,
+    this.rankTier,
+    this.username,
+    this.slug,
+    this.badgesCount = 5,
   });
 }
 

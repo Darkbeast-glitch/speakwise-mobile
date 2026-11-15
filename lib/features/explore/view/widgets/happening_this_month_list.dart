@@ -33,7 +33,7 @@ class HappeningThisMonthList extends StatelessWidget {
       children: [
         // 1. Header Row
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 12),
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

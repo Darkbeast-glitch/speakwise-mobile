@@ -96,6 +96,9 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
             eventTitle: item['event_title']?.toString() ?? '',
             eventId: item['event_id']?.toString(),
             eventImage: _sanitizeUrl(item['event_image']?.toString()),
+            presentationLink: item['presentation_link']?.toString(),
+            videoRecordingLink: item['video_recording_link']?.toString(),
+            date: item['date']?.toString() ?? item['event_date']?.toString(),
           ));
         }
       }
@@ -125,11 +128,46 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
               date: item['date']?.toString() ?? '',
               image: _sanitizeUrl(item['image']?.toString() ?? item['event_image']?.toString()),
               eventId: item['event_id']?.toString(),
+              presentationLink: item['presentation_link']?.toString(),
+              videoRecordingLink: item['video_recording_link']?.toString(),
+              description: item['description']?.toString(),
             ));
           }
         }
       }
     }
+
+    // Check experiences endpoint to enrich talks & spoken events
+    try {
+      final experiences = await fetchSpeakerExperiences(slugOrId);
+      for (final exp in experiences) {
+        if (!seenEvents.contains(exp.name.toLowerCase())) {
+          seenEvents.add(exp.name.toLowerCase());
+          eventsSpokenList.add(exp);
+        }
+        // If not already in talks, add experience as verified talk
+        final alreadyHasTalk = talksList.any((t) =>
+            t.id == exp.id ||
+            (t.eventTitle.toLowerCase() == exp.name.toLowerCase() && t.title == exp.topic));
+        if (!alreadyHasTalk) {
+          talksList.add(SpeakerTalkItem(
+            id: exp.id,
+            title: exp.topic.isNotEmpty ? exp.topic : '${exp.name} Keynote',
+            description: (exp.description != null && exp.description!.isNotEmpty)
+                ? exp.description!
+                : 'Verified keynote presentation delivered at ${exp.name}.',
+            duration: 45,
+            category: 'Keynote',
+            eventTitle: exp.name,
+            eventId: exp.eventId,
+            eventImage: exp.image,
+            date: exp.date,
+            presentationLink: exp.presentationLink,
+            videoRecordingLink: exp.videoRecordingLink,
+          ));
+        }
+      }
+    } catch (_) {}
 
     // Derive spoken events from talks if still empty
     if (eventsSpokenList.isEmpty) {
@@ -142,22 +180,34 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
             topic: talk.title,
             image: talk.eventImage,
             eventId: talk.eventId,
+            presentationLink: talk.presentationLink,
+            videoRecordingLink: talk.videoRecordingLink,
+            description: talk.description,
+            date: talk.date ?? '',
           ));
         }
       }
     }
 
-    // If still empty, check experiences endpoint
-    if (eventsSpokenList.isEmpty) {
-      try {
-        final experiences = await fetchSpeakerExperiences(slugOrId);
-        for (final exp in experiences) {
-          if (!seenEvents.contains(exp.name.toLowerCase())) {
-            seenEvents.add(exp.name.toLowerCase());
-            eventsSpokenList.add(exp);
-          }
-        }
-      } catch (_) {}
+    // If talks are still empty, derive talks from eventsSpokenList
+    if (talksList.isEmpty && eventsSpokenList.isNotEmpty) {
+      for (final evt in eventsSpokenList) {
+        talksList.add(SpeakerTalkItem(
+          id: evt.id,
+          title: evt.topic.isNotEmpty ? evt.topic : '${evt.name} Keynote',
+          description: (evt.description != null && evt.description!.isNotEmpty)
+              ? evt.description!
+              : 'Verified keynote presentation delivered at ${evt.name}.',
+          duration: 45,
+          category: 'Keynote',
+          eventTitle: evt.name,
+          eventId: evt.eventId,
+          eventImage: evt.image,
+          date: evt.date,
+          presentationLink: evt.presentationLink,
+          videoRecordingLink: evt.videoRecordingLink,
+        ));
+      }
     }
 
     final fullName = json['speaker_name']?.toString() ?? json['name']?.toString() ?? '';
@@ -172,11 +222,21 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
     final totalFeedback = feedbackSummary['total_count'] is int ? feedbackSummary['total_count'] as int : 0;
     final followers = json['followers_count'] is int ? json['followers_count'] as int : 0;
 
-    final totalTalksCount = talksList.isNotEmpty
-        ? talksList.length
-        : (eventsSpokenList.isNotEmpty
-            ? eventsSpokenList.length
-            : (json['events_spoken'] is List ? (json['events_spoken'] as List).length : 0));
+    final totalTalksCount = json['total_talks'] is num
+        ? (json['total_talks'] as num).toInt()
+        : (talksList.isNotEmpty
+            ? talksList.length
+            : (eventsSpokenList.isNotEmpty
+                ? eventsSpokenList.length
+                : (json['events_spoken'] is List ? (json['events_spoken'] as List).length : 0)));
+
+    final reputationScore = json['reputation_score'] is num
+        ? (json['reputation_score'] as num).toDouble()
+        : null;
+    final rankTier = json['rank_tier']?.toString();
+    final totalReviews = json['total_reviews'] is num
+        ? (json['total_reviews'] as num).toInt()
+        : (totalFeedback > 0 ? totalFeedback : null);
 
     return UserProfile(
       id: json['id']?.toString() ?? slugOrId,
@@ -201,6 +261,9 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
       attendeesCount: totalFeedback > 0 ? totalFeedback : followers,
       positivePercentage: totalFeedback > 0 ? 100.0 : 0.0,
       averageRating: avgRating,
+      reputationScore: reputationScore,
+      rankTier: rankTier,
+      totalReviews: totalReviews,
     );
   }
 
@@ -262,6 +325,9 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
             date: raw['event_date']?.toString() ?? '',
             image: _sanitizeUrl(raw['event_image']?.toString()),
             eventId: raw['event']?.toString() ?? raw['event_id']?.toString(),
+            presentationLink: raw['presentation_link']?.toString(),
+            videoRecordingLink: raw['video_recording_link']?.toString(),
+            description: raw['description']?.toString(),
           ));
         }
       }

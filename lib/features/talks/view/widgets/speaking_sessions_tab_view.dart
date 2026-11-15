@@ -20,114 +20,191 @@ class SpeakingSessionsTabView extends ConsumerWidget {
     final talksState = ref.watch(talksViewModelProvider);
     final talks = talksState.talks;
 
-    return ListView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
-      children: [
-        // 1. Webapp Prompt Banner: Feedback QR Codes for Your Talks
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F110B),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: AppTheme.primaryAccent.withValues(alpha: 0.25),
+    return RefreshIndicator(
+      color: AppTheme.primaryAccent,
+      backgroundColor: const Color(0xFF141611),
+      onRefresh: () => ref.read(talksViewModelProvider.notifier).loadTalksData(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+        children: [
+          // 1. Webapp Prompt Banner: Feedback QR Codes for Your Talks
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F110B),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppTheme.primaryAccent.withValues(alpha: 0.25),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryAccent.withValues(alpha: 0.16),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.qr_code_rounded,
+                    color: AppTheme.primaryAccent,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Feedback QR Codes for Your Talks',
+                        style: AppTheme.font(
+                          color: AppTheme.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        'Every talk you add generates a unique QR code. Add it to your slides and let attendees scan in seconds.',
+                        style: AppTheme.font(
+                          color: AppTheme.textMuted,
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+
+          const SizedBox(height: 18),
+
+          // 2. Section Header with "New Talk" Action
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryAccent.withValues(alpha: 0.16),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.qr_code_rounded,
-                  color: AppTheme.primaryAccent,
-                  size: 20,
+              Text(
+                'My Speaking Experiences',
+                style: AppTheme.font(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Feedback QR Codes for Your Talks',
-                      style: AppTheme.font(
-                        color: AppTheme.textPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  AddTalkModal.show(context);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryAccent,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.add_rounded, color: Colors.black, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Add Talk',
+                        style: AppTheme.font(
+                          color: Colors.black,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      'Every talk you add generates a unique QR code. Add it to your slides and let attendees scan in seconds.',
-                      style: AppTheme.font(
-                        color: AppTheme.textMuted,
-                        fontSize: 12,
-                        height: 1.35,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-        ),
 
-        const SizedBox(height: 18),
+          const SizedBox(height: 14),
 
-        // 2. Section Header with "New Talk" Action
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'My Speaking Experiences',
-              style: AppTheme.font(
-                color: AppTheme.textPrimary,
-                fontSize: 16.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
-              ),
-            ),
-            GestureDetector(
-              onTap: () {
-                HapticFeedback.lightImpact();
-                AddTalkModal.show(context);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryAccent,
-                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+          // 3. Speaking Sessions Cards or Clean Empty State
+          if (talks.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F110B),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.08),
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.add_rounded, color: Colors.black, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Add Talk',
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryAccent.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.mic_none_rounded,
+                      color: AppTheme.primaryAccent,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No Speaking Experiences Yet',
+                    style: AppTheme.font(
+                      color: AppTheme.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Add your conference or meetup talks to generate live feedback QR codes and start collecting attendee ratings.',
+                    textAlign: TextAlign.center,
+                    style: AppTheme.font(
+                      color: AppTheme.textMuted,
+                      fontSize: 12.5,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryAccent,
+                      foregroundColor: Colors.black,
+                      shape: const StadiumBorder(),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                    ),
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      AddTalkModal.show(context);
+                    },
+                    icon: const Icon(Icons.add_rounded, size: 18),
+                    label: Text(
+                      'Add Your First Talk',
                       style: AppTheme.font(
-                        color: Colors.black,
-                        fontSize: 12,
+                        fontSize: 13,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 14),
-
-        // 3. Speaking Sessions Cards
-        ...talks.map((talk) => _buildTalkCard(context, ref, talk)),
-      ],
+            )
+          else
+            ...talks.map((talk) => _buildTalkCard(context, ref, talk)),
+        ],
+      ),
     );
   }
 
@@ -286,13 +363,20 @@ class SpeakingSessionsTabView extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        ' (${talk.reviewsCount} reviews)',
+                        ' (${talk.reviewsCount})',
                         style: AppTheme.font(
                           color: AppTheme.textMuted,
                           fontSize: 11,
                         ),
                       ),
-                    ],
+                    ] else
+                      Text(
+                        'No reviews yet',
+                        style: AppTheme.font(
+                          color: AppTheme.textMuted,
+                          fontSize: 11,
+                        ),
+                      ),
                   ],
                 ),
 

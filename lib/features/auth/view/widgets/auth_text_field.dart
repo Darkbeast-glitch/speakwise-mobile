@@ -15,6 +15,7 @@ class AuthTextField extends StatelessWidget {
   final ValueChanged<String>? onChanged;
   final FormFieldValidator<String>? validator;
   final bool readOnly;
+  final bool enabled;
   final VoidCallback? onTap;
 
   const AuthTextField({
@@ -28,42 +29,48 @@ class AuthTextField extends StatelessWidget {
     this.onChanged,
     this.validator,
     this.readOnly = false,
+    this.enabled = true,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      decoration: BoxDecoration(
-        color: const Color(0xFFDCDCDC), // Light gray pill fill from mockup
-        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
-      ),
-      child: TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        readOnly: readOnly,
-        onTap: onTap,
-        onChanged: onChanged,
-        validator: validator,
-        style: AppTheme.font(
-          color: const Color(0xFF1A1A1A), // Dark text for high contrast on light gray
-          fontSize: 14.5,
-          fontWeight: FontWeight.w500,
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: enabled ? 1.0 : 0.65,
+      child: Container(
+        height: 52,
+        decoration: BoxDecoration(
+          color: const Color(0xFFDCDCDC), // Light gray pill fill from mockup
+          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
         ),
-        cursorColor: Colors.black,
-        decoration: InputDecoration(
-          hintText: hintText,
-          hintStyle: AppTheme.font(
-            color: const Color(0xFF757575), // Muted dark placeholder
+        child: TextFormField(
+          controller: controller,
+          enabled: enabled,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          readOnly: readOnly,
+          onTap: onTap,
+          onChanged: onChanged,
+          validator: validator,
+          style: AppTheme.font(
+            color: const Color(0xFF1A1A1A), // Dark text for high contrast on light gray
             fontSize: 14.5,
-            fontWeight: FontWeight.w400,
+            fontWeight: FontWeight.w500,
           ),
-          prefixIcon: prefixIcon,
-          suffixIcon: suffixIcon,
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
+          cursorColor: Colors.black,
+          decoration: InputDecoration(
+            hintText: hintText,
+            hintStyle: AppTheme.font(
+              color: const Color(0xFF757575), // Muted dark placeholder
+              fontSize: 14.5,
+              fontWeight: FontWeight.w400,
+            ),
+            prefixIcon: prefixIcon,
+            suffixIcon: suffixIcon,
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
+          ),
         ),
       ),
     );

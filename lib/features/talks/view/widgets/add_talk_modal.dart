@@ -28,7 +28,7 @@ class AddTalkModal extends ConsumerStatefulWidget {
 class _AddTalkModalState extends ConsumerState<AddTalkModal> {
   final _formKey = GlobalKey<FormState>();
   final _eventNameController = TextEditingController();
-  final _eventDateController = TextEditingController(text: '13/11/2026');
+  late final TextEditingController _eventDateController;
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _presentationUrlController = TextEditingController();
@@ -39,6 +39,11 @@ class _AddTalkModalState extends ConsumerState<AddTalkModal> {
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _eventDateController = TextEditingController(
+      text:
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+    );
     // Listeners to live-update the Cover Preview
     _eventNameController.addListener(() => setState(() {}));
     _titleController.addListener(() => setState(() {}));
@@ -199,7 +204,7 @@ class _AddTalkModalState extends ConsumerState<AddTalkModal> {
                     _fieldLabel('Event Date *'),
                     _inputField(
                       _eventDateController,
-                      '13/11/2026',
+                      'YYYY-MM-DD',
                       suffixIcon: IconButton(
                         icon: const Icon(
                           Icons.calendar_today_outlined,
@@ -227,7 +232,7 @@ class _AddTalkModalState extends ConsumerState<AddTalkModal> {
                           );
                           if (picked != null) {
                             _eventDateController.text =
-                                '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+                                '${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')}';
                           }
                         },
                       ),
@@ -438,68 +443,21 @@ class _AddTalkModalState extends ConsumerState<AddTalkModal> {
           color: Colors.white.withValues(alpha: 0.12),
         ),
       ),
-      child: Column(
-        children: [
-          // Rich Formatting Toolbar (matching Image 2)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1A1C16),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-              border: Border(
-                bottom: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
-              ),
-            ),
-            child: Row(
-              children: [
-                _toolbarIcon('B', isBold: true),
-                _toolbarIcon('I', isItalic: true),
-                _toolbarIcon('H₁'),
-                _toolbarIcon('H₂'),
-                _toolbarIcon('”'),
-                _toolbarIcon('🔗'),
-                _toolbarIcon('</>'),
-                const Spacer(),
-                const Icon(Icons.undo_rounded, size: 16, color: AppTheme.textMuted),
-                const SizedBox(width: 8),
-                const Icon(Icons.redo_rounded, size: 16, color: AppTheme.textMuted),
-              ],
-            ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: TextField(
+        controller: _descriptionController,
+        maxLines: 4,
+        style: AppTheme.font(color: Colors.white, fontSize: 13.5),
+        cursorColor: AppTheme.primaryAccent,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          isDense: true,
+          hintText:
+              'Share what your talk covers, key takeaways, and prerequisites...',
+          hintStyle: AppTheme.font(
+            color: Colors.white.withValues(alpha: 0.28),
+            fontSize: 13,
           ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: TextField(
-              controller: _descriptionController,
-              maxLines: 4,
-              style: AppTheme.font(color: Colors.white, fontSize: 13.5),
-              cursorColor: AppTheme.primaryAccent,
-              decoration: InputDecoration(
-                border: InputBorder.none,
-                isDense: true,
-                hintText: 'Share what your talk covers, key takeaways, and prerequisites...',
-                hintStyle: AppTheme.font(
-                  color: Colors.white.withValues(alpha: 0.28),
-                  fontSize: 13,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _toolbarIcon(String text, {bool isBold = false, bool isItalic = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 12),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: AppTheme.textMuted,
-          fontSize: 13,
-          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-          fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
         ),
       ),
     );

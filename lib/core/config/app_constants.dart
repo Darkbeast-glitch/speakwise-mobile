@@ -19,8 +19,8 @@ class AppConstants {
   static const String keySpeakerSlug = 'speaker_slug';
   static const String keyIsGuest = 'is_guest';
 
-  // API Config (Points to Django Backend running on development Mac over LAN)
-  static const String defaultApiUrl = 'http://192.168.0.192:8000/api';
+  // API Config (Production SpeakWise Backend)
+  static const String defaultApiUrl = 'https://apis.speakwise.live/api';
   static const Duration connectTimeout = Duration(seconds: 15);
   static const Duration receiveTimeout = Duration(seconds: 15);
 }

@@ -12,6 +12,7 @@ export 'viewmodel/explore_viewmodel.dart';
 // Screens
 export 'view/explore_screen.dart';
 export 'view/all_events_screen.dart';
+export 'view/all_speakers_screen.dart';
 export 'view/event_details_screen.dart';
 
 // Widgets

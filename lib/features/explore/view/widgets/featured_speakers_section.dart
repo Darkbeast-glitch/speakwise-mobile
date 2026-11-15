@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
-import 'package:speakwise_mobile/core/widgets/user_avatar.dart';
+import 'package:speakwise_mobile/core/widgets/app_network_image.dart';
 import 'package:speakwise_mobile/features/explore/data/models/event_model.dart';
 
 /// ═══════════════════════════════════════════════════════════════
-/// Explore Section: Featured Keynote Speakers
-/// Horizontal Cards of Verified Speakers with Reputation Badges
+/// Explore Section: Top Keynote Speakers
+/// Horizontal Spotlights of Top Rated Keynote Speakers
+/// Matches the card layout with speaker hero photo, Top Rated badge,
+/// rating & talks & badges stats, and Neon Lime "View" button.
 /// ═══════════════════════════════════════════════════════════════
 class FeaturedSpeakersSection extends StatelessWidget {
   final List<EventSpeaker> speakers;
@@ -22,6 +25,10 @@ class FeaturedSpeakersSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (speakers.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -32,7 +39,7 @@ class FeaturedSpeakersSection extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Top Keynote Speakers',
+                'Top Speakers',
                 style: AppTheme.font(
                   color: AppTheme.textPrimary,
                   fontSize: 16.5,
@@ -43,7 +50,11 @@ class FeaturedSpeakersSection extends StatelessWidget {
               GestureDetector(
                 onTap: () {
                   HapticFeedback.lightImpact();
-                  onSeeAllTap?.call();
+                  if (onSeeAllTap != null) {
+                    onSeeAllTap!.call();
+                  } else {
+                    context.push('/speakers/all');
+                  }
                 },
                 child: Text(
                   'See all',
@@ -60,7 +71,7 @@ class FeaturedSpeakersSection extends StatelessWidget {
 
         // 2. Horizontal Speakers Carousel
         SizedBox(
-          height: 175,
+          height: 215,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -68,6 +79,14 @@ class FeaturedSpeakersSection extends StatelessWidget {
             separatorBuilder: (_, _) => const SizedBox(width: 14),
             itemBuilder: (context, index) {
               final speaker = speakers[index];
+              final scoreText = speaker.reputationScore != null
+                  ? speaker.reputationScore!.toStringAsFixed(1)
+                  : speaker.rating.toStringAsFixed(1);
+              final rankText =
+                  (speaker.rankTier != null &&
+                      speaker.rankTier!.trim().isNotEmpty)
+                  ? speaker.rankTier!
+                  : 'Top Rated';
 
               return GestureDetector(
                 onTap: () {
@@ -75,8 +94,7 @@ class FeaturedSpeakersSection extends StatelessWidget {
                   onSpeakerTap?.call(speaker);
                 },
                 child: Container(
-                  width: 154,
-                  padding: const EdgeInsets.all(12),
+                  width: 160,
                   decoration: BoxDecoration(
                     color: const Color(0xFF141414),
                     borderRadius: BorderRadius.circular(20),
@@ -87,111 +105,173 @@ class FeaturedSpeakersSection extends StatelessWidget {
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.35),
-                        blurRadius: 14,
+                        blurRadius: 16,
                         offset: const Offset(0, 6),
                       ),
                     ],
                   ),
-                  child: Column(
-                    children: [
-                      // Avatar with verified badge
-                      Stack(
-                        alignment: Alignment.bottomRight,
-                        children: [
-                          UserAvatar(
-                            name: speaker.name,
-                            avatarUrl: speaker.avatarPath,
-                            size: 54,
-                            showBorder: true,
-                            borderColor: AppTheme.primaryAccent,
-                          ),
-                          Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: const BoxDecoration(
-                              color: AppTheme.primaryAccent,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              color: Colors.black,
-                              size: 10,
-                            ),
-                          ),
-                        ],
-                      ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Speaker Photo Background
+                        _buildSpeakerPhoto(speaker),
 
-                      const SizedBox(height: 8),
-
-                      // Speaker Name
-                      Text(
-                        speaker.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTheme.font(
-                          color: AppTheme.textPrimary,
-                          fontSize: 13.5,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.1,
-                        ),
-                      ),
-
-                      const SizedBox(height: 3),
-
-                      // Rating & Talks count
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.star_rounded,
-                            color: AppTheme.starGold,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${speaker.rating}',
-                            style: AppTheme.font(
-                              color: AppTheme.textPrimary,
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Flexible(
-                            child: Text(
-                              ' • ${speaker.talksGiven} talks',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTheme.font(
-                                color: AppTheme.textMuted,
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w400,
+                        // Dark Gradient Overlay for bottom text legibility
+                        Positioned.fill(
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                stops: const [0.2, 0.55, 0.85, 1.0],
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withValues(alpha: 0.25),
+                                  Colors.black.withValues(alpha: 0.75),
+                                  Colors.black.withValues(alpha: 0.95),
+                                ],
                               ),
                             ),
                           ),
-                        ],
-                      ),
-
-                      const Spacer(),
-
-                      // Topic Chip
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1E1E1E),
-                          borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                         ),
-                        child: Text(
-                          speaker.role,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTheme.font(
-                            color: AppTheme.textMuted,
-                            fontSize: 9.5,
-                            fontWeight: FontWeight.w500,
+
+                        // Top-Right Pill Badge ("Top Rated")
+                        Positioned(
+                          top: 10,
+                          right: 10,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3.5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.7),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.12),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Text(
+                              rankText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTheme.font(
+                                color: Colors.white,
+                                fontSize: 9.5,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+
+                        // Bottom Content Overlay
+                        Positioned(
+                          left: 12,
+                          right: 12,
+                          bottom: 12,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Speaker Name
+                              Text(
+                                speaker.name,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTheme.font(
+                                  color: Colors.white,
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.2,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+
+                              // Star, Rating, Talks, Badges Row
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    color: AppTheme.starGold,
+                                    size: 14,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Text(
+                                    scoreText,
+                                    style: AppTheme.font(
+                                      color: Colors.white,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${speaker.talksGiven} Talks',
+                                    style: AppTheme.font(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.85,
+                                      ),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${speaker.badgesCount} Badges',
+                                    style: AppTheme.font(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.85,
+                                      ),
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 2),
+
+                              // Spoke at X events
+                              Text(
+                                'Spoke at ${speaker.talksGiven} events',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTheme.font(
+                                  color: Colors.white.withValues(alpha: 0.65),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Small Neon Lime "View" Pill Button
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryAccent,
+                                  borderRadius: BorderRadius.circular(
+                                    AppTheme.radiusPill,
+                                  ),
+                                ),
+                                child: Text(
+                                  'View',
+                                  style: AppTheme.font(
+                                    color: Colors.black,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -199,6 +279,54 @@ class FeaturedSpeakersSection extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSpeakerPhoto(EventSpeaker speaker) {
+    final avatar = speaker.avatarPath.trim();
+    if (avatar.startsWith('assets/')) {
+      return Image.asset(
+        avatar,
+        fit: BoxFit.cover,
+        alignment: Alignment.topCenter,
+        errorBuilder: (context, error, stackTrace) =>
+            _buildFallback(speaker.name),
+      );
+    }
+    if (avatar.isNotEmpty) {
+      return AppNetworkImage(
+        imageUrl: avatar,
+        fit: BoxFit.cover,
+        placeholder: _buildFallback(speaker.name),
+        errorWidget: _buildFallback(speaker.name),
+      );
+    }
+    return _buildFallback(speaker.name);
+  }
+
+  Widget _buildFallback(String name) {
+    String initials = '';
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      initials = '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    } else if (parts.isNotEmpty && parts[0].isNotEmpty) {
+      initials = parts[0]
+          .substring(0, parts[0].length >= 2 ? 2 : 1)
+          .toUpperCase();
+    }
+
+    return Container(
+      color: const Color(0xFF1E1E22),
+      child: Center(
+        child: Text(
+          initials,
+          style: AppTheme.font(
+            color: AppTheme.primaryAccent,
+            fontSize: 32,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
     );
   }
 }

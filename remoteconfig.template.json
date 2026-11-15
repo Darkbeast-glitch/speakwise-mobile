@@ -1,0 +1,53 @@
+{
+  "parameters": {
+    "api_base_url": {
+      "defaultValue": {
+        "value": "https://apis.speakwise.live/api"
+      },
+      "description": "SpeakWise Django REST API base URL endpoint",
+      "valueType": "STRING"
+    },
+    "enable_featured_carousel": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Toggle the auto-swiping hero banner on the Explore screen",
+      "valueType": "BOOLEAN"
+    },
+    "enable_online_event_logos": {
+      "defaultValue": {
+        "value": "true"
+      },
+      "description": "Toggle resolving high-res conference logos online for Events Spoken",
+      "valueType": "BOOLEAN"
+    },
+    "maintenance_mode": {
+      "defaultValue": {
+        "value": "false"
+      },
+      "description": "Enable maintenance banner when backend is undergoing updates",
+      "valueType": "BOOLEAN"
+    },
+    "maintenance_message": {
+      "defaultValue": {
+        "value": "SpeakWise is undergoing scheduled improvements. Please check back shortly."
+      },
+      "description": "Maintenance mode message displayed to users",
+      "valueType": "STRING"
+    },
+    "min_supported_version": {
+      "defaultValue": {
+        "value": "1.0.0"
+      },
+      "description": "Minimum required app version to prevent breaking changes",
+      "valueType": "STRING"
+    },
+    "connect_timeout_seconds": {
+      "defaultValue": {
+        "value": "15"
+      },
+      "description": "Network connect timeout in seconds",
+      "valueType": "NUMBER"
+    }
+  }
+}

@@ -149,7 +149,7 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
               return false;
             },
             child: SizedBox(
-              height: 368,
+              height: 332,
               child: PageView.builder(
                 controller: _pageController,
                 itemCount: items.length,
@@ -198,7 +198,7 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
           ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: SizedBox(
-              height: 168,
+              height: 150,
               width: double.infinity,
               child: Stack(
                 fit: StackFit.expand,
@@ -343,7 +343,7 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
           // Event Title
           GestureDetector(
@@ -357,14 +357,14 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
               overflow: TextOverflow.ellipsis,
               style: AppTheme.font(
                 color: AppTheme.textPrimary,
-                fontSize: 21,
+                fontSize: 20,
                 fontWeight: FontWeight.w800,
                 letterSpacing: -0.3,
               ),
             ),
           ),
 
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
 
           // Full Date Row with Calendar Icon
           Row(
@@ -372,7 +372,7 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
               const Icon(
                 Icons.calendar_today_outlined,
                 color: AppTheme.primaryAccent,
-                size: 13.5,
+                size: 13,
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -382,7 +382,7 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
                   overflow: TextOverflow.ellipsis,
                   style: AppTheme.font(
                     color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -390,7 +390,7 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
             ],
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
 
           // Full Location Row (City + Country) with Pin Icon
           Row(
@@ -398,7 +398,7 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
               const Icon(
                 Icons.location_on_outlined,
                 color: AppTheme.textMuted,
-                size: 13.5,
+                size: 13,
               ),
               const SizedBox(width: 6),
               Expanded(
@@ -408,7 +408,7 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
                   overflow: TextOverflow.ellipsis,
                   style: AppTheme.font(
                     color: AppTheme.textMuted,
-                    fontSize: 12.5,
+                    fontSize: 12,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -418,21 +418,21 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
 
           // Short Bio / Description Preview (2 lines max with ellipsis)
           if (event.description.trim().isNotEmpty) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Text(
               event.description.trim(),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: AppTheme.font(
                 color: AppTheme.textMuted.withValues(alpha: 0.85),
-                fontSize: 12,
-                height: 1.3,
+                fontSize: 11.5,
+                height: 1.25,
                 fontWeight: FontWeight.w400,
               ),
             ),
           ],
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
           // Two Action Buttons: "Buy Ticket" & "View Event"
           Row(
@@ -440,7 +440,7 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
               // Buy Ticket (Dark with subtle border)
               Expanded(
                 child: SizedBox(
-                  height: 40,
+                  height: 38,
                   child: Material(
                     color: const Color(0xFF181818),
                     shape: StadiumBorder(
@@ -476,7 +476,7 @@ class _FeaturedEventCardState extends State<FeaturedEventCard> {
               // View Event (Electric Neon Lime)
               Expanded(
                 child: SizedBox(
-                  height: 40,
+                  height: 38,
                   child: Material(
                     color: AppTheme.primaryAccent,
                     shape: const StadiumBorder(),

@@ -114,7 +114,21 @@ class _TestEventsRepository implements EventsRepository {
   }
 
   @override
-  Future<List<EventSpeaker>> getTopSpeakers() async {
+  Future<List<EventSpeaker>> getTopSpeakers({
+    bool top = true,
+    String? ordering,
+  }) async {
+    return EventsData.topSpeakers;
+  }
+
+  @override
+  Future<List<EventSpeaker>> getSpeakers({
+    bool? top,
+    String? ordering,
+    String? search,
+    int? page,
+    int? pageSize,
+  }) async {
     return EventsData.topSpeakers;
   }
 

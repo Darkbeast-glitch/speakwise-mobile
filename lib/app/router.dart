@@ -104,6 +104,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/speakers/all',
+        builder: (context, state) {
+          final filter = state.uri.queryParameters['filter'];
+          return AllSpeakersScreen(initialFilter: filter);
+        },
+      ),
+      GoRoute(
+        path: '/speakers',
+        builder: (context, state) {
+          final filter = state.uri.queryParameters['filter'];
+          return AllSpeakersScreen(initialFilter: filter);
+        },
+      ),
+      GoRoute(
         path: '/profile/edit',
         builder: (context, state) => const EditProfileScreen(),
       ),

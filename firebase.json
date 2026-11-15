@@ -1,0 +1,33 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "speakwise-mobile-app",
+          "appId": "1:599023740512:android:94bf1fd3ee14c88b0c4505",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "speakwise-mobile-app",
+          "appId": "1:599023740512:ios:cac8c88eea9883500c4505",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "speakwise-mobile-app",
+          "configurations": {
+            "android": "1:599023740512:android:94bf1fd3ee14c88b0c4505",
+            "ios": "1:599023740512:ios:cac8c88eea9883500c4505"
+          }
+        }
+      }
+    }
+  },
+  "remoteconfig": {
+    "template": "remoteconfig.template.json"
+  }
+}

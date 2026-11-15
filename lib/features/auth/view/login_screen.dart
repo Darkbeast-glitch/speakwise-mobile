@@ -34,6 +34,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   void _onSignIn() async {
     HapticFeedback.lightImpact();
+    FocusScope.of(context).unfocus();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
@@ -146,6 +147,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _emailController,
                   hintText: 'bbjulius900@gmail.com',
                   keyboardType: TextInputType.emailAddress,
+                  enabled: !_isLoading,
+                  readOnly: _isLoading,
                 ),
 
                 const SizedBox(height: 14),
@@ -155,6 +158,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   controller: _passwordController,
                   hintText: 'password.',
                   obscureText: _obscurePassword,
+                  enabled: !_isLoading,
+                  readOnly: _isLoading,
                   suffixIcon: IconButton(
                     icon: Icon(
                       _obscurePassword
@@ -163,9 +168,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       color: const Color(0xFF6E6E6E),
                       size: 20,
                     ),
-                    onPressed: () {
-                      setState(() => _obscurePassword = !_obscurePassword);
-                    },
+                    onPressed: _isLoading
+                        ? null
+                        : () {
+                            setState(() => _obscurePassword = !_obscurePassword);
+                          },
                   ),
                 ),
 
@@ -175,17 +182,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      final email = _emailController.text.trim();
-                      if (email.isNotEmpty) {
-                        context.push(
-                          '/auth/forgot-password?email=${Uri.encodeComponent(email)}',
-                        );
-                      } else {
-                        context.push('/auth/forgot-password');
-                      }
-                    },
+                    onTap: _isLoading
+                        ? null
+                        : () {
+                            HapticFeedback.lightImpact();
+                            final email = _emailController.text.trim();
+                            if (email.isNotEmpty) {
+                              context.push(
+                                '/auth/forgot-password?email=${Uri.encodeComponent(email)}',
+                              );
+                            } else {
+                              context.push('/auth/forgot-password');
+                            }
+                          },
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Text(
@@ -240,10 +249,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // 7. Footer: "Don't have an account? Sign up."
                 GestureDetector(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    context.go('/auth/signup');
-                  },
+                  onTap: _isLoading
+                      ? null
+                      : () {
+                          HapticFeedback.lightImpact();
+                          context.go('/auth/signup');
+                        },
                   child: Text.rich(
                     TextSpan(
                       style: AppTheme.font(

@@ -16,7 +16,17 @@ abstract class EventsRepository {
   });
   Future<List<EventItem>> getFeaturedEvents();
   Future<EventItem?> getEventDetail(String idOrSlug);
-  Future<List<EventSpeaker>> getTopSpeakers();
+  Future<List<EventSpeaker>> getTopSpeakers({
+    bool top = true,
+    String? ordering,
+  });
+  Future<List<EventSpeaker>> getSpeakers({
+    bool? top,
+    String? ordering,
+    String? search,
+    int? page,
+    int? pageSize,
+  });
   Future<List<EventItem>> getUpcomingEvents();
 }
 
@@ -65,8 +75,31 @@ class DjangoEventsRepositoryImpl implements EventsRepository {
   }
 
   @override
-  Future<List<EventSpeaker>> getTopSpeakers() async {
-    return await remoteDataSource.fetchTopSpeakers();
+  Future<List<EventSpeaker>> getTopSpeakers({
+    bool top = true,
+    String? ordering,
+  }) async {
+    return await remoteDataSource.fetchTopSpeakers(
+      top: top,
+      ordering: ordering,
+    );
+  }
+
+  @override
+  Future<List<EventSpeaker>> getSpeakers({
+    bool? top,
+    String? ordering,
+    String? search,
+    int? page,
+    int? pageSize,
+  }) async {
+    return await remoteDataSource.fetchSpeakers(
+      top: top,
+      ordering: ordering,
+      search: search,
+      page: page,
+      pageSize: pageSize,
+    );
   }
 
   @override

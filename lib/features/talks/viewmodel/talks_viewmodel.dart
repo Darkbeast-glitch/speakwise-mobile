@@ -14,11 +14,11 @@ class TalksViewModel extends StateNotifier<TalksState> {
             talks: [],
             allReviews: [],
             dimensionAnalysis: DimensionAnalysis(
-              overallScore: 8.1,
-              engagementScore: 7.8,
-              clarityScore: 8.4,
-              technicalDepthScore: 7.9,
-              practicalRelevanceScore: 8.2,
+              overallScore: 0.0,
+              engagementScore: 0.0,
+              clarityScore: 0.0,
+              technicalDepthScore: 0.0,
+              practicalRelevanceScore: 0.0,
             ),
             selectedTab: 0, // Feedback tab
           ),
@@ -48,8 +48,14 @@ class TalksViewModel extends StateNotifier<TalksState> {
     state = state.copyWith(selectedTab: index);
   }
 
-  void setFilterTalkId(String talkId) {
+  void setFilterTalkId(String talkId) async {
     state = state.copyWith(selectedTalkFilterId: talkId);
+    try {
+      final filteredAnalysis = await _repository.getDimensionAnalysis(
+        talkId: talkId == 'all' ? null : talkId,
+      );
+      state = state.copyWith(dimensionAnalysis: filteredAnalysis);
+    } catch (_) {}
   }
 
   Future<SpeakingTalk> addTalk({

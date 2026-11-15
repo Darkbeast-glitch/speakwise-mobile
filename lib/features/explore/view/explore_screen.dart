@@ -331,7 +331,7 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                       },
                       onSeeAllTap: () {
                         HapticFeedback.lightImpact();
-                        context.push('/events/all');
+                        context.push('/speakers/all');
                       },
                     ),
 

@@ -209,7 +209,6 @@ class MockTalksRepository implements TalksRepository {
 
 class DjangoTalksRepositoryImpl implements TalksRepository {
   final TalksRemoteDataSource remoteDataSource;
-  final MockTalksRepository _localFallback = MockTalksRepository();
 
   DjangoTalksRepositoryImpl({required this.remoteDataSource});
 
@@ -217,24 +216,47 @@ class DjangoTalksRepositoryImpl implements TalksRepository {
   Future<List<SpeakingTalk>> getSpeakingTalks() async {
     try {
       final talks = await remoteDataSource.fetchSpeakerExperiences();
-      if (talks.isNotEmpty) return talks;
+
+      // Enrich talks with real reviews count and average rating if reviews exist
+      try {
+        final allReviews = await remoteDataSource.fetchFeedbackForExperience('');
+        if (allReviews.isNotEmpty) {
+          final enriched = <SpeakingTalk>[];
+          for (final talk in talks) {
+            final matching = allReviews.where(
+              (r) => r.talkId == talk.id || talk.qrCodeUrl.endsWith(r.talkId),
+            );
+            if (matching.isNotEmpty) {
+              final avg = matching.map((r) => r.score).reduce((a, b) => a + b) /
+                  matching.length;
+              enriched.add(talk.copyWith(
+                rating: double.parse(avg.toStringAsFixed(1)),
+                reviewsCount: matching.length,
+              ));
+            } else {
+              enriched.add(talk);
+            }
+          }
+          return enriched;
+        }
+      } catch (_) {}
+
+      return talks;
     } catch (e) {
-      debugPrint('Django fetchSpeakerExperiences note: $e');
+      debugPrint('Django fetchSpeakerExperiences error: $e');
+      return [];
     }
-    return _localFallback.getSpeakingTalks();
   }
 
   @override
   Future<List<FeedbackReview>> getFeedbackReviews({String? talkId}) async {
     try {
-      final reviews = await remoteDataSource.fetchFeedbackForExperience(
-        (talkId == null || talkId == 'all') ? '' : talkId,
-      );
-      if (reviews.isNotEmpty) return reviews;
+      final slug = (talkId == null || talkId == 'all') ? '' : talkId;
+      return await remoteDataSource.fetchFeedbackForExperience(slug);
     } catch (e) {
-      debugPrint('Django fetchFeedbackForExperience note: $e');
+      debugPrint('Django fetchFeedbackForExperience error: $e');
+      return [];
     }
-    return _localFallback.getFeedbackReviews(talkId: talkId);
   }
 
   @override
@@ -258,28 +280,34 @@ class DjangoTalksRepositoryImpl implements TalksRepository {
       final count = reviews.length;
       return DimensionAnalysis(
         overallScore: double.parse((totalOverall / count).toStringAsFixed(1)),
-        engagementScore: double.parse((totalEngagement / count).toStringAsFixed(1)),
+        engagementScore:
+            double.parse((totalEngagement / count).toStringAsFixed(1)),
         clarityScore: double.parse((totalClarity / count).toStringAsFixed(1)),
-        technicalDepthScore: double.parse((totalDepth / count).toStringAsFixed(1)),
-        practicalRelevanceScore: double.parse((totalPractical / count).toStringAsFixed(1)),
+        technicalDepthScore:
+            double.parse((totalDepth / count).toStringAsFixed(1)),
+        practicalRelevanceScore:
+            double.parse((totalPractical / count).toStringAsFixed(1)),
       );
     }
-    return _localFallback.getDimensionAnalysis(talkId: talkId);
+
+    // Clean zero-activity baseline when no reviews have been submitted yet
+    return const DimensionAnalysis(
+      overallScore: 0.0,
+      engagementScore: 0.0,
+      clarityScore: 0.0,
+      technicalDepthScore: 0.0,
+      practicalRelevanceScore: 0.0,
+    );
   }
 
   @override
   Future<SpeakingTalk> addSpeakingTalk(SpeakingTalk talk) async {
-    try {
-      return await remoteDataSource.createSpeakerExperience(
-        eventName: talk.eventName,
-        eventDate: talk.eventDate,
-        topic: talk.title,
-        description: talk.description,
-        presentationLink: talk.presentationUrl,
-      );
-    } catch (e) {
-      debugPrint('Django addSpeakingTalk note: $e');
-      return _localFallback.addSpeakingTalk(talk);
-    }
+    return await remoteDataSource.createSpeakerExperience(
+      eventName: talk.eventName,
+      eventDate: talk.eventDate,
+      topic: talk.title,
+      description: talk.description,
+      presentationLink: talk.presentationUrl,
+    );
   }
 }

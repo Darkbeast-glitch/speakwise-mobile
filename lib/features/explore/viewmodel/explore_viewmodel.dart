@@ -108,8 +108,8 @@ class ExploreViewModel extends StateNotifier<ExploreState> {
         upcoming = events;
       }
 
-      // 6. Top speakers
-      final speakers = await _repository.getTopSpeakers();
+      // 6. Top speakers (Bayesian reputation ranking)
+      final speakers = await _repository.getTopSpeakers(top: true);
 
       // 7. Featured events (queried via ?is_featured=true)
       List<EventItem> featuredList = [];
@@ -261,5 +261,20 @@ class ExploreViewModel extends StateNotifier<ExploreState> {
       selectedCountry: 'All',
     );
     loadExploreFeed();
+  }
+
+  /// Sort and filter speakers using backend ordering and ranking parameters:
+  /// - top: true (Bayesian compound reputation ranking, zero-activity filtered)
+  /// - ordering: '-talks_count', '-reputation', '-rating', '-followers'
+  Future<void> sortSpeakers({bool top = true, String? ordering}) async {
+    try {
+      final speakers = await _repository.getTopSpeakers(
+        top: top,
+        ordering: ordering,
+      );
+      if (speakers.isNotEmpty) {
+        state = state.copyWith(topSpeakers: speakers);
+      }
+    } catch (_) {}
   }
 }

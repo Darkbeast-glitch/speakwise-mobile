@@ -22,128 +22,146 @@ class FeedbackTabView extends ConsumerWidget {
     final talks = talksState.talks;
     final selectedFilterId = talksState.selectedTalkFilterId;
 
-    return ListView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
-      children: [
-        // 1. Dimension Analysis Breakdown (from Web Dashboard)
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F110B),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.08),
+    double prog(double score) => (score / 10.0).clamp(0.0, 1.0);
+    String pct(double score) {
+      if (score <= 0.0) return '0% (0.0/10)';
+      return '${(prog(score) * 100).toStringAsFixed(0)}% (${score.toStringAsFixed(1)}/10)';
+    }
+
+    return RefreshIndicator(
+      color: AppTheme.primaryAccent,
+      backgroundColor: const Color(0xFF141611),
+      onRefresh: () => ref.read(talksViewModelProvider.notifier).loadTalksData(),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+        padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
+        children: [
+          // 1. Dimension Analysis Breakdown (from Web Dashboard)
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F110B),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Dimension Analysis',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Dimension Analysis',
+                          style: AppTheme.font(
+                            color: AppTheme.textPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          selectedFilterId == 'all'
+                              ? 'Feedback metrics breakdown • All Time'
+                              : 'Filtered presentation metrics',
+                          style: AppTheme.font(
+                            color: AppTheme.textMuted,
+                            fontSize: 11.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: analysis.overallScore > 0
+                            ? AppTheme.primaryAccent.withValues(alpha: 0.16)
+                            : Colors.white.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                      ),
+                      child: Text(
+                        analysis.overallScore > 0
+                            ? '${(analysis.overallScore * 10).toStringAsFixed(0)}% Average'
+                            : 'No Reviews',
                         style: AppTheme.font(
-                          color: AppTheme.textPrimary,
-                          fontSize: 16,
+                          color: analysis.overallScore > 0
+                              ? AppTheme.primaryAccent
+                              : AppTheme.textMuted,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Feedback metrics breakdown • All Time',
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Overall Score Callout
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      analysis.overallScore.toStringAsFixed(1),
+                      style: AppTheme.font(
+                        color: AppTheme.textPrimary,
+                        fontSize: 34,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.8,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 5, left: 4),
+                      child: Text(
+                        '/ 10 Overall Score',
                         style: AppTheme.font(
                           color: AppTheme.textMuted,
-                          fontSize: 11.5,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryAccent.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     ),
-                    child: Text(
-                      '85% Target',
-                      style: AppTheme.font(
-                        color: AppTheme.primaryAccent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Overall Score Callout
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${analysis.overallScore}',
-                    style: AppTheme.font(
-                      color: AppTheme.textPrimary,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.8,
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 5, left: 4),
-                    child: Text(
-                      '/ 10 Overall Score',
-                      style: AppTheme.font(
-                        color: AppTheme.textMuted,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // 4 Progress Bars matching Webapp Image 2
-              _dimensionBar(
-                'Audience Engagement',
-                analysis.engagementScore,
-                0.78,
-                '24% (7.8/10)',
-              ),
-              const SizedBox(height: 10),
-              _dimensionBar(
-                'Speech Clarity',
-                analysis.clarityScore,
-                0.84,
-                '25% (8.4/10)',
-              ),
-              const SizedBox(height: 10),
-              _dimensionBar(
-                'Technical Depth',
-                analysis.technicalDepthScore,
-                0.79,
-                '25% (7.9/10)',
-              ),
-              const SizedBox(height: 10),
-              _dimensionBar(
-                'Practical Relevance',
-                analysis.practicalRelevanceScore,
-                0.82,
-                '26% (8.2/10)',
-              ),
-            ],
+                // 4 Progress Bars matching live dimension breakdown
+                _dimensionBar(
+                  'Audience Engagement',
+                  analysis.engagementScore,
+                  prog(analysis.engagementScore),
+                  pct(analysis.engagementScore),
+                ),
+                const SizedBox(height: 10),
+                _dimensionBar(
+                  'Speech Clarity',
+                  analysis.clarityScore,
+                  prog(analysis.clarityScore),
+                  pct(analysis.clarityScore),
+                ),
+                const SizedBox(height: 10),
+                _dimensionBar(
+                  'Technical Depth',
+                  analysis.technicalDepthScore,
+                  prog(analysis.technicalDepthScore),
+                  pct(analysis.technicalDepthScore),
+                ),
+                const SizedBox(height: 10),
+                _dimensionBar(
+                  'Practical Relevance',
+                  analysis.practicalRelevanceScore,
+                  prog(analysis.practicalRelevanceScore),
+                  pct(analysis.practicalRelevanceScore),
+                ),
+              ],
+            ),
           ),
-        ),
 
         const SizedBox(height: 20),
 
@@ -249,8 +267,9 @@ class FeedbackTabView extends ConsumerWidget {
         else
           ...reviews.map((rev) => _buildReviewCard(rev)),
       ],
-    );
-  }
+    ),
+  );
+}
 
   Widget _filterChip({
     required WidgetRef ref,

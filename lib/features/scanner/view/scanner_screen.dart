@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/features/scanner/view/widgets/audience_feedback_sheet.dart';
 
 /// ═══════════════════════════════════════════════════════════════
-/// Screen 3: Instant QR Scanner (Hero Center Tab 2)
+/// Screen 3: Live QR Scanner with Camera Viewfinder
+/// Scans talk QR codes or web feedback URLs to open AudienceFeedbackSheet
 /// ═══════════════════════════════════════════════════════════════
 class ScannerScreen extends StatefulWidget {
-  const ScannerScreen({super.key});
+  final bool isActive;
+
+  const ScannerScreen({
+    super.key,
+    this.isActive = true,
+  });
 
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
@@ -15,8 +22,9 @@ class ScannerScreen extends StatefulWidget {
 
 class _ScannerScreenState extends State<ScannerScreen>
     with SingleTickerProviderStateMixin {
-  bool _isFlashOn = false;
-  late AnimationController _animController;
+  late final MobileScannerController _scannerController;
+  late final AnimationController _animController;
+  bool _isProcessingScan = false;
 
   @override
   void initState() {
@@ -24,13 +32,216 @@ class _ScannerScreenState extends State<ScannerScreen>
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2200),
-    )..repeat(reverse: true);
+    );
+
+    if (widget.isActive) {
+      _animController.repeat(reverse: true);
+    }
+
+    _scannerController = MobileScannerController(
+      detectionSpeed: DetectionSpeed.noDuplicates,
+      facing: CameraFacing.back,
+      formats: const [BarcodeFormat.qrCode],
+      autoStart: widget.isActive,
+    );
+  }
+
+  @override
+  void didUpdateWidget(ScannerScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive) {
+      if (widget.isActive) {
+        _scannerController.start();
+        _animController.repeat(reverse: true);
+      } else {
+        _scannerController.stop();
+        _animController.stop();
+      }
+    }
   }
 
   @override
   void dispose() {
     _animController.dispose();
+    _scannerController.dispose();
     super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_isProcessingScan) return;
+    final barcodes = capture.barcodes;
+    if (barcodes.isEmpty) return;
+
+    final rawValue = barcodes.first.rawValue?.trim();
+    if (rawValue == null || rawValue.isEmpty) return;
+
+    _isProcessingScan = true;
+    HapticFeedback.heavyImpact();
+
+    // Extract feedback slug from QR URL or plain string
+    // e.g. "https://speak-wise.live/rate/stellar-talk-2026"
+    // or "https://speakwise.live/talk/flutter-cicd/feedback"
+    // or plain "stellar-talk-2026"
+    String slug = rawValue;
+    try {
+      final uri = Uri.tryParse(rawValue);
+      if (uri != null && uri.pathSegments.isNotEmpty) {
+        if (uri.pathSegments.contains('rate')) {
+          final idx = uri.pathSegments.indexOf('rate');
+          if (idx + 1 < uri.pathSegments.length) {
+            slug = uri.pathSegments[idx + 1];
+          } else {
+            slug = uri.pathSegments.last;
+          }
+        } else if (uri.pathSegments.contains('talk')) {
+          final idx = uri.pathSegments.indexOf('talk');
+          if (idx + 1 < uri.pathSegments.length) {
+            slug = uri.pathSegments[idx + 1];
+          } else {
+            slug = uri.pathSegments.last;
+          }
+        } else {
+          slug = uri.pathSegments.last;
+        }
+      }
+    } catch (_) {}
+
+    AudienceFeedbackSheet.show(
+      context,
+      feedbackSlug: slug,
+    ).then((_) {
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (mounted) {
+          setState(() => _isProcessingScan = false);
+        }
+      });
+    });
+  }
+
+  void _showManualCodeDialog() {
+    final controller = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFF141414),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border(
+                top: BorderSide(color: AppTheme.surfaceBorder, width: 1),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Enter Session Code',
+                  style: AppTheme.font(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Type the speaker or session code shown on the presentation slide.',
+                  style: AppTheme.font(
+                    color: AppTheme.textMuted,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  style: AppTheme.font(
+                    color: AppTheme.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'e.g. flutter-cicd or stellar-2026',
+                    hintStyle: AppTheme.font(
+                      color: AppTheme.textMuted.withValues(alpha: 0.6),
+                      fontSize: 14,
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFF1C1D18),
+                    prefixIcon: const Icon(
+                      Icons.tag_rounded,
+                      color: AppTheme.primaryAccent,
+                      size: 20,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppTheme.surfaceBorder),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppTheme.surfaceBorder),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: AppTheme.primaryAccent, width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final code = controller.text.trim();
+                      if (code.isEmpty) return;
+                      Navigator.pop(ctx);
+                      AudienceFeedbackSheet.show(
+                        context,
+                        feedbackSlug: code,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryAccent,
+                      foregroundColor: AppTheme.textOnPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Open Session Feedback',
+                      style: AppTheme.font(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -42,22 +253,82 @@ class _ScannerScreenState extends State<ScannerScreen>
       body: Stack(
         alignment: Alignment.center,
         children: [
-          // 1. Simulated Camera Viewfinder Layer
-          Container(
-            color: const Color(0xFF070908),
-            child: Center(
-              child: Opacity(
-                opacity: 0.08,
-                child: Icon(
-                  Icons.camera_alt_rounded,
-                  size: 160,
-                  color: AppTheme.primaryAccent,
-                ),
+          // 1. Live Camera Hardware Scanner
+          Positioned.fill(
+            child: MobileScanner(
+              controller: _scannerController,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error) {
+                return Container(
+                  color: const Color(0xFF070908),
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.camera_alt_outlined,
+                          size: 56,
+                          color: AppTheme.textMuted.withValues(alpha: 0.6),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Camera Access Needed',
+                          style: AppTheme.font(
+                            color: AppTheme.textPrimary,
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Please allow camera access in device settings to scan presentation QR codes.',
+                          textAlign: TextAlign.center,
+                          style: AppTheme.font(
+                            color: AppTheme.textMuted,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+              onDetect: _onDetect,
+            ),
+          ),
+
+          // 2. Darkened Semi-transparent Vignette Overlay
+          Positioned.fill(
+            child: ColorFiltered(
+              colorFilter: ColorFilter.mode(
+                Colors.black.withValues(alpha: 0.45),
+                BlendMode.srcOut,
+              ),
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.transparent,
+                    ),
+                  ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: frameSize,
+                      height: frameSize,
+                      decoration: BoxDecoration(
+                        color: Colors.black,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
 
-          // 2. Viewfinder Target Frame
+          // 3. Viewfinder Target Frame & Animated Neon Laser
           Center(
             child: SizedBox(
               width: frameSize,
@@ -95,9 +366,9 @@ class _ScannerScreenState extends State<ScannerScreen>
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: AppTheme.primaryAccent.withValues(alpha: 0.7),
+                                color: AppTheme.primaryAccent.withValues(alpha: 0.8),
                                 blurRadius: 10,
-                                spreadRadius: 1,
+                                spreadRadius: 1.5,
                               ),
                             ],
                           ),
@@ -110,7 +381,7 @@ class _ScannerScreenState extends State<ScannerScreen>
             ),
           ),
 
-          // 3. Top Floating Controls
+          // 4. Top Floating Controls
           Positioned(
             top: 56,
             left: 24,
@@ -122,13 +393,17 @@ class _ScannerScreenState extends State<ScannerScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.6),
+                    color: Colors.black.withValues(alpha: 0.65),
                     borderRadius: BorderRadius.circular(AppTheme.radiusPill),
                     border: Border.all(color: AppTheme.surfaceBorder),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.qr_code_2_rounded, color: AppTheme.primaryAccent, size: 16),
+                      const Icon(
+                        Icons.qr_code_scanner_rounded,
+                        color: AppTheme.primaryAccent,
+                        size: 16,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Talk QR Scanner',
@@ -142,31 +417,69 @@ class _ScannerScreenState extends State<ScannerScreen>
                   ),
                 ),
 
-                // Flashlight Toggle
-                GestureDetector(
-                  onTap: () => setState(() => _isFlashOn = !_isFlashOn),
-                  child: Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: _isFlashOn ? AppTheme.primaryAccent : Colors.black.withValues(alpha: 0.6),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.surfaceBorder),
+                // Action buttons: Torch & Camera flip
+                Row(
+                  children: [
+                    // Flashlight Toggle
+                    ValueListenableBuilder<MobileScannerState>(
+                      valueListenable: _scannerController,
+                      builder: (context, state, child) {
+                        final isTorchOn = state.torchState == TorchState.on;
+                        return GestureDetector(
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            _scannerController.toggleTorch();
+                          },
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: isTorchOn
+                                  ? AppTheme.primaryAccent
+                                  : Colors.black.withValues(alpha: 0.65),
+                              shape: BoxShape.circle,
+                              border: Border.all(color: AppTheme.surfaceBorder),
+                            ),
+                            child: Icon(
+                              isTorchOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
+                              color: isTorchOn ? AppTheme.textOnPrimary : AppTheme.textPrimary,
+                              size: 20,
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                    child: Icon(
-                      _isFlashOn ? Icons.flash_on_rounded : Icons.flash_off_rounded,
-                      color: _isFlashOn ? AppTheme.textOnPrimary : AppTheme.textPrimary,
-                      size: 20,
+                    const SizedBox(width: 10),
+                    // Flip Camera
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _scannerController.switchCamera();
+                      },
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppTheme.surfaceBorder),
+                        ),
+                        child: const Icon(
+                          Icons.flip_camera_ios_rounded,
+                          color: AppTheme.textPrimary,
+                          size: 20,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
           ),
 
-          // 4. Instructions & Manual Fallback Button
+          // 5. Instructions & Manual Fallback Button
           Positioned(
-            bottom: 120, // above floating nav bar
+            bottom: 110, // above floating nav bar
             left: 24,
             right: 24,
             child: Column(
@@ -188,18 +501,12 @@ class _ScannerScreenState extends State<ScannerScreen>
                     fontSize: 13,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
                 // Manual Code Entry
                 GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    AudienceFeedbackSheet.show(
-                      context,
-                      feedbackSlug: 'stellar-web3-cortex-2026',
-                      topic: 'Architecting Scalable Web3 Backends on Stellar',
-                      speaker: 'Julius Boakye',
-                      event: 'Cortex DevFest 2026',
-                    );
+                    _showManualCodeDialog();
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),

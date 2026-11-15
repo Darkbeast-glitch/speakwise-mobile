@@ -35,6 +35,9 @@ class SpeakerEventSpoken {
   final String date;
   final String image;
   final String? eventId;
+  final String? presentationLink;
+  final String? videoRecordingLink;
+  final String? description;
 
   const SpeakerEventSpoken({
     required this.id,
@@ -43,6 +46,9 @@ class SpeakerEventSpoken {
     this.date = '',
     this.image = '',
     this.eventId,
+    this.presentationLink,
+    this.videoRecordingLink,
+    this.description,
   });
 }
 
@@ -56,6 +62,9 @@ class SpeakerTalkItem {
   final String eventTitle;
   final String? eventId;
   final String eventImage;
+  final String? presentationLink;
+  final String? videoRecordingLink;
+  final String? date;
 
   const SpeakerTalkItem({
     required this.id,
@@ -66,6 +75,9 @@ class SpeakerTalkItem {
     this.eventTitle = '',
     this.eventId,
     this.eventImage = '',
+    this.presentationLink,
+    this.videoRecordingLink,
+    this.date,
   });
 }
 
@@ -93,6 +105,9 @@ class UserProfile {
   final int attendeesCount;
   final double positivePercentage;
   final double averageRating;
+  final double? reputationScore;
+  final String? rankTier;
+  final int? totalReviews;
 
   const UserProfile({
     this.id = '',
@@ -117,6 +132,9 @@ class UserProfile {
     required this.attendeesCount,
     required this.positivePercentage,
     required this.averageRating,
+    this.reputationScore,
+    this.rankTier,
+    this.totalReviews,
   });
 
   String get fullName => '$firstName $lastName'.trim();
@@ -144,6 +162,9 @@ class UserProfile {
     int? attendeesCount,
     double? positivePercentage,
     double? averageRating,
+    double? reputationScore,
+    String? rankTier,
+    int? totalReviews,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -168,6 +189,9 @@ class UserProfile {
       attendeesCount: attendeesCount ?? this.attendeesCount,
       positivePercentage: positivePercentage ?? this.positivePercentage,
       averageRating: averageRating ?? this.averageRating,
+      reputationScore: reputationScore ?? this.reputationScore,
+      rankTier: rankTier ?? this.rankTier,
+      totalReviews: totalReviews ?? this.totalReviews,
     );
   }
 }

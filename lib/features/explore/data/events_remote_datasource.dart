@@ -31,7 +31,17 @@ abstract class EventsRemoteDataSource {
     int? limit,
   });
   Future<EventItem?> fetchEventDetail(String idOrSlug);
-  Future<List<EventSpeaker>> fetchTopSpeakers();
+  Future<List<EventSpeaker>> fetchTopSpeakers({
+    bool top = true,
+    String? ordering,
+  });
+  Future<List<EventSpeaker>> fetchSpeakers({
+    bool? top,
+    String? ordering,
+    String? search,
+    int? page,
+    int? pageSize,
+  });
 }
 
 class DjangoEventsRemoteDataSource implements EventsRemoteDataSource {
@@ -274,34 +284,93 @@ class DjangoEventsRemoteDataSource implements EventsRemoteDataSource {
   }
 
   @override
-  Future<List<EventSpeaker>> fetchTopSpeakers() async {
+  Future<List<EventSpeaker>> fetchTopSpeakers({
+    bool top = true,
+    String? ordering,
+  }) async {
+    return await fetchSpeakers(top: top, ordering: ordering);
+  }
+
+  @override
+  Future<List<EventSpeaker>> fetchSpeakers({
+    bool? top,
+    String? ordering,
+    String? search,
+    int? page,
+    int? pageSize,
+  }) async {
     try {
-      final response = await apiClient.get('/speakers/', authenticated: false);
-      if (response is Map && response['results'] is List) {
-        final list = response['results'] as List;
-        final mapped = list.map((item) {
-          final json = item as Map<String, dynamic>;
-          final name = json['speaker_name']?.toString() ?? 'Speaker';
-          final slug = json['slug']?.toString() ?? json['username']?.toString() ?? 'speaker';
-          final role = json['organization']?.toString() ?? 'Keynote Speaker';
-          var avatar = json['avatar']?.toString() ?? '';
-          if (avatar.contains('127.0.0.1:8000') || avatar.contains('localhost:8000')) {
-            final host = Uri.parse(apiClient.baseUrl).host;
-            avatar = avatar.replaceAll('127.0.0.1', host).replaceAll('localhost', host);
-          }
-          return EventSpeaker(
-            id: slug,
-            name: name,
-            role: role.isNotEmpty ? role : 'Keynote Speaker',
-            avatarPath: avatar,
-            rating: 4.9,
-            talksGiven: json['events_spoken'] is List ? (json['events_spoken'] as List).length : 5,
-            badge: 'Verified Speaker',
-            topic: json['short_bio']?.toString() ?? '',
-          );
-        }).toList();
-        if (mapped.isNotEmpty) return mapped;
+      final queryParams = <String, dynamic>{};
+      if (top == true) {
+        queryParams['top'] = 'true';
       }
+      if (ordering != null && ordering.isNotEmpty) {
+        queryParams['ordering'] = ordering;
+      }
+      if (search != null && search.isNotEmpty) {
+        queryParams['search'] = search;
+      }
+      if (page != null) {
+        queryParams['page'] = page;
+      }
+      if (pageSize != null) {
+        queryParams['page_size'] = pageSize;
+      }
+
+      final response = await apiClient.get(
+        '/speakers/',
+        queryParameters: queryParams.isNotEmpty ? queryParams : null,
+        authenticated: false,
+      );
+
+      List list = [];
+      if (response is Map && response['results'] is List) {
+        list = response['results'] as List;
+      } else if (response is List) {
+        list = response;
+      }
+
+      final mapped = list.map((item) {
+        final json = item as Map<String, dynamic>;
+        final id = json['id']?.toString() ?? '';
+        final name = json['speaker_name']?.toString() ?? json['name']?.toString() ?? 'Speaker';
+        final slug = json['slug']?.toString() ?? json['username']?.toString() ?? 'speaker';
+        final username = json['username']?.toString() ?? slug;
+        final role = json['organization']?.toString() ?? 'Keynote Speaker';
+        var avatar = json['avatar']?.toString() ?? '';
+        if (avatar.contains('127.0.0.1:8000') || avatar.contains('localhost:8000')) {
+          final host = Uri.parse(apiClient.baseUrl).host;
+          avatar = avatar.replaceAll('127.0.0.1', host).replaceAll('localhost', host);
+        }
+        final totalTalks = json['total_talks'] is num
+            ? (json['total_talks'] as num).toInt()
+            : (json['events_spoken'] is List ? (json['events_spoken'] as List).length : 0);
+        final totalReviews = json['total_reviews'] is num ? (json['total_reviews'] as num).toInt() : 0;
+        final averageRating = json['average_rating'] is num ? (json['average_rating'] as num).toDouble() : null;
+        final reputationScore = json['reputation_score'] is num ? (json['reputation_score'] as num).toDouble() : null;
+        final rankTier = json['rank_tier']?.toString();
+        final badgesCount = json['badges_count'] is num
+            ? (json['badges_count'] as num).toInt()
+            : (json['badges'] is List ? (json['badges'] as List).length : 5);
+
+        return EventSpeaker(
+          id: slug.isNotEmpty ? slug : id,
+          name: name,
+          role: role.isNotEmpty ? role : 'Keynote Speaker',
+          avatarPath: avatar,
+          rating: reputationScore ?? averageRating ?? 4.9,
+          talksGiven: totalTalks > 0 ? totalTalks : 1,
+          badge: rankTier ?? 'Top Speaker',
+          topic: json['short_bio']?.toString() ?? '',
+          reputationScore: reputationScore,
+          totalReviews: totalReviews,
+          rankTier: rankTier,
+          username: username,
+          slug: slug,
+          badgesCount: badgesCount,
+        );
+      }).toList();
+      if (mapped.isNotEmpty) return mapped;
     } catch (_) {}
     return [];
   }

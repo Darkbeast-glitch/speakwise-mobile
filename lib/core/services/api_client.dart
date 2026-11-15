@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:speakwise_mobile/core/config/app_constants.dart';
+import 'package:speakwise_mobile/core/services/remote_config_service.dart';
 import 'package:speakwise_mobile/core/services/storage_service.dart';
 
 /// Custom Exception thrown during API operations
@@ -268,5 +269,9 @@ class ApiClient {
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final storage = ref.watch(storageServiceProvider);
-  return ApiClient(storageService: storage);
+  final remoteConfig = ref.watch(remoteConfigServiceProvider);
+  return ApiClient(
+    storageService: storage,
+    baseUrl: remoteConfig.apiBaseUrl,
+  );
 });
