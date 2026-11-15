@@ -499,29 +499,6 @@ class DjangoTalksRemoteDataSource implements TalksRemoteDataSource {
 
     return reviews;
   }
-        eventName: eventName,
-        attendeeName: json['is_anonymous'] == true
-            ? 'Anonymous Attendee'
-            : (json['name']?.toString().trim().isNotEmpty == true
-                ? json['name'].toString().trim()
-                : 'Attendee'),
-        attendeeAvatar: '',
-        score: overall,
-        timeAgo: timeAgo,
-        comment: json['comments']?.toString() ?? '',
-        sentimentTags: tags,
-        dimensionBreakdown: {
-          'Engagement': engagement,
-          'Clarity': clarity,
-          'Technical': depth,
-          'Practical': practical,
-          'Knowledge': knowledge,
-        },
-      ));
-    }
-
-    return reviews;
-  }
 
   @override
   Future<Map<String, dynamic>> fetchTalkBySlug(String feedbackSlug) async {

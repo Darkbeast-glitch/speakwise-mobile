@@ -5,6 +5,7 @@ import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/core/widgets/user_avatar.dart';
 import 'package:speakwise_mobile/features/talks/data/models/talk_model.dart';
 import 'package:speakwise_mobile/features/talks/viewmodel/talks_provider.dart';
+import 'package:speakwise_mobile/features/talks/viewmodel/talks_state.dart';
 
 /// ═══════════════════════════════════════════════════════════════
 /// Feedback Tab View

@@ -6,6 +6,7 @@ import 'package:speakwise_mobile/features/talks/data/models/talk_model.dart';
 import 'package:speakwise_mobile/features/talks/view/widgets/add_talk_modal.dart';
 import 'package:speakwise_mobile/features/talks/view/widgets/talk_qr_code_modal.dart';
 import 'package:speakwise_mobile/features/talks/viewmodel/talks_provider.dart';
+import 'package:speakwise_mobile/features/talks/viewmodel/talks_state.dart';
 
 /// ═══════════════════════════════════════════════════════════════
 /// My Speaking Sessions Tab View
