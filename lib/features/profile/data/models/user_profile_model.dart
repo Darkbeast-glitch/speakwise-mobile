@@ -71,7 +71,7 @@ class SpeakerTalkItem {
     required this.title,
     this.description = '',
     this.duration = 30,
-    this.category = 'Keynote',
+    this.category = 'Talk',
     this.eventTitle = '',
     this.eventId,
     this.eventImage = '',

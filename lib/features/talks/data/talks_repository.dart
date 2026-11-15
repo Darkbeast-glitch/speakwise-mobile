@@ -252,7 +252,44 @@ class DjangoTalksRepositoryImpl implements TalksRepository {
   Future<List<FeedbackReview>> getFeedbackReviews({String? talkId}) async {
     try {
       final slug = (talkId == null || talkId == 'all') ? '' : talkId;
-      return await remoteDataSource.fetchFeedbackForExperience(slug);
+      var reviews = await remoteDataSource.fetchFeedbackForExperience(slug);
+
+      // If querying all reviews was empty, gather reviews across each of the speaker's talks
+      if (reviews.isEmpty && (slug.isEmpty || slug == 'all')) {
+        final talks = await remoteDataSource.fetchSpeakerExperiences();
+        final collected = <FeedbackReview>[];
+        final seenReviewIds = <String>{};
+
+        for (final talk in talks) {
+          final talkSlug = talk.qrCodeUrl.split('/').last.trim();
+          if (talkSlug.isNotEmpty) {
+            final subReviews =
+                await remoteDataSource.fetchFeedbackForExperience(talkSlug);
+            for (final r in subReviews) {
+              if (!seenReviewIds.contains(r.id)) {
+                seenReviewIds.add(r.id);
+                collected.add(r);
+              }
+            }
+          }
+          if (talk.id.isNotEmpty && talk.id != talkSlug) {
+            final subReviews =
+                await remoteDataSource.fetchFeedbackForExperience(talk.id);
+            for (final r in subReviews) {
+              if (!seenReviewIds.contains(r.id)) {
+                seenReviewIds.add(r.id);
+                collected.add(r);
+              }
+            }
+          }
+        }
+
+        if (collected.isNotEmpty) {
+          reviews = collected;
+        }
+      }
+
+      return reviews;
     } catch (e) {
       debugPrint('Django fetchFeedbackForExperience error: $e');
       return [];
@@ -289,6 +326,33 @@ class DjangoTalksRepositoryImpl implements TalksRepository {
             double.parse((totalPractical / count).toStringAsFixed(1)),
       );
     }
+
+    // Check if the speaker profile itself has aggregated feedback_summary
+    try {
+      final slugOrId = await remoteDataSource.resolveSpeakerSlugOrId();
+      if (slugOrId != null && slugOrId.isNotEmpty && remoteDataSource is DjangoTalksRemoteDataSource) {
+        final client = (remoteDataSource as DjangoTalksRemoteDataSource).apiClient;
+        final profileRes = await client.get('/speakers/$slugOrId/');
+        if (profileRes is Map<String, dynamic> && profileRes['feedback_summary'] is Map) {
+          final summary = profileRes['feedback_summary'] as Map<String, dynamic>;
+          final overall = (summary['overall_rating'] as Map?)?['average'];
+          final eng = (summary['engagement'] as Map?)?['average'];
+          final clr = (summary['clarity'] as Map?)?['average'];
+          final dpt = (summary['content_depth'] as Map?)?['average'];
+          final prc = (summary['practical_relevance'] as Map?)?['average'];
+
+          if (overall is num && overall > 0) {
+            return DimensionAnalysis(
+              overallScore: double.parse(overall.toDouble().toStringAsFixed(1)),
+              engagementScore: eng is num ? double.parse(eng.toDouble().toStringAsFixed(1)) : double.parse(overall.toDouble().toStringAsFixed(1)),
+              clarityScore: clr is num ? double.parse(clr.toDouble().toStringAsFixed(1)) : double.parse(overall.toDouble().toStringAsFixed(1)),
+              technicalDepthScore: dpt is num ? double.parse(dpt.toDouble().toStringAsFixed(1)) : double.parse(overall.toDouble().toStringAsFixed(1)),
+              practicalRelevanceScore: prc is num ? double.parse(prc.toDouble().toStringAsFixed(1)) : double.parse(overall.toDouble().toStringAsFixed(1)),
+            );
+          }
+        }
+      }
+    } catch (_) {}
 
     // Clean zero-activity baseline when no reviews have been submitted yet
     return const DimensionAnalysis(

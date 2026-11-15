@@ -336,7 +336,7 @@ class DjangoEventsRemoteDataSource implements EventsRemoteDataSource {
         final name = json['speaker_name']?.toString() ?? json['name']?.toString() ?? 'Speaker';
         final slug = json['slug']?.toString() ?? json['username']?.toString() ?? 'speaker';
         final username = json['username']?.toString() ?? slug;
-        final role = json['organization']?.toString() ?? 'Keynote Speaker';
+        final role = json['organization']?.toString() ?? json['headline']?.toString() ?? '';
         var avatar = json['avatar']?.toString() ?? '';
         if (avatar.contains('127.0.0.1:8000') || avatar.contains('localhost:8000')) {
           final host = Uri.parse(apiClient.baseUrl).host;
@@ -351,15 +351,15 @@ class DjangoEventsRemoteDataSource implements EventsRemoteDataSource {
         final rankTier = json['rank_tier']?.toString();
         final badgesCount = json['badges_count'] is num
             ? (json['badges_count'] as num).toInt()
-            : (json['badges'] is List ? (json['badges'] as List).length : 5);
+            : (json['badges'] is List ? (json['badges'] as List).length : 0);
 
         return EventSpeaker(
           id: slug.isNotEmpty ? slug : id,
           name: name,
-          role: role.isNotEmpty ? role : 'Keynote Speaker',
+          role: role,
           avatarPath: avatar,
-          rating: reputationScore ?? averageRating ?? 4.9,
-          talksGiven: totalTalks > 0 ? totalTalks : 1,
+          rating: reputationScore ?? averageRating ?? 0.0,
+          talksGiven: totalTalks,
           badge: rankTier ?? 'Top Speaker',
           topic: json['short_bio']?.toString() ?? '',
           reputationScore: reputationScore,

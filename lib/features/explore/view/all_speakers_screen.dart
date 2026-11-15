@@ -38,9 +38,10 @@ class _AllSpeakersScreenState extends ConsumerState<AllSpeakersScreen> {
   final int _pageSize = 20;
 
   String _searchQuery = '';
-  String _selectedFilter = 'Top Rated';
+  String _selectedFilter = 'All';
 
   final List<Map<String, String>> _filterOptions = const [
+    {'label': 'All', 'ordering': '', 'top': 'false'},
     {'label': 'Top Rated', 'ordering': '', 'top': 'true'},
     {'label': 'Most Talks', 'ordering': '-talks_count', 'top': 'false'},
     {'label': 'Reputation', 'ordering': '-reputation', 'top': 'false'},

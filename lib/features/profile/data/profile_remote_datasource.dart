@@ -89,10 +89,10 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
         if (item is Map) {
           talksList.add(SpeakerTalkItem(
             id: item['id']?.toString() ?? 'talk-${talksList.length}',
-            title: item['title']?.toString() ?? 'Keynote Talk',
+            title: item['title']?.toString() ?? 'Talk',
             description: item['description']?.toString() ?? '',
             duration: item['duration'] is int ? item['duration'] as int : 30,
-            category: item['category']?.toString() ?? 'Keynote',
+            category: item['category']?.toString() ?? 'Talk',
             eventTitle: item['event_title']?.toString() ?? '',
             eventId: item['event_id']?.toString(),
             eventImage: _sanitizeUrl(item['event_image']?.toString()),
@@ -152,12 +152,12 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
         if (!alreadyHasTalk) {
           talksList.add(SpeakerTalkItem(
             id: exp.id,
-            title: exp.topic.isNotEmpty ? exp.topic : '${exp.name} Keynote',
+            title: exp.topic.isNotEmpty ? exp.topic : '${exp.name} Talk',
             description: (exp.description != null && exp.description!.isNotEmpty)
                 ? exp.description!
-                : 'Verified keynote presentation delivered at ${exp.name}.',
+                : 'Verified talk delivered at ${exp.name}.',
             duration: 45,
-            category: 'Keynote',
+            category: 'Talk',
             eventTitle: exp.name,
             eventId: exp.eventId,
             eventImage: exp.image,
@@ -194,12 +194,12 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
       for (final evt in eventsSpokenList) {
         talksList.add(SpeakerTalkItem(
           id: evt.id,
-          title: evt.topic.isNotEmpty ? evt.topic : '${evt.name} Keynote',
+          title: evt.topic.isNotEmpty ? evt.topic : '${evt.name} Talk',
           description: (evt.description != null && evt.description!.isNotEmpty)
               ? evt.description!
-              : 'Verified keynote presentation delivered at ${evt.name}.',
+              : 'Verified talk delivered at ${evt.name}.',
           duration: 45,
-          category: 'Keynote',
+          category: 'Talk',
           eventTitle: evt.name,
           eventId: evt.eventId,
           eventImage: evt.image,

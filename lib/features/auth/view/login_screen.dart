@@ -7,6 +7,7 @@ import 'package:speakwise_mobile/core/services/api_client.dart';
 import 'package:speakwise_mobile/core/widgets/widgets.dart';
 import 'package:speakwise_mobile/features/auth/auth.dart';
 import 'package:speakwise_mobile/features/profile/profile.dart';
+import 'package:speakwise_mobile/features/talks/viewmodel/talks_provider.dart';
 
 /// ═══════════════════════════════════════════════════════════════
 /// Screen 1B: Sign In Screen ("Login Screen")
@@ -62,6 +63,41 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         await ref.read(profileViewModelProvider.notifier).loadProfile();
       } catch (_) {}
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: AppTheme.primaryAccent,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  'Login successfully',
+                  style: AppTheme.font(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF1B1D1F),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(
+                color: AppTheme.primaryAccent.withValues(alpha: 0.35),
+                width: 1,
+              ),
+            ),
+          ),
+        );
+        ref.invalidate(talksViewModelProvider);
+        ref.invalidate(profileViewModelProvider);
         context.go('/shell');
       }
     } catch (e) {

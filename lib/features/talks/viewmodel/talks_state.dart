@@ -25,7 +25,24 @@ class TalksState {
     if (selectedTalkFilterId == 'all') {
       return allReviews;
     }
-    return allReviews.where((r) => r.talkId == selectedTalkFilterId).toList();
+    return allReviews.where((r) {
+      if (r.talkId == selectedTalkFilterId) return true;
+      final matchingTalk = talks.cast<SpeakingTalk?>().firstWhere(
+        (t) => t?.id == selectedTalkFilterId,
+        orElse: () => null,
+      );
+      if (matchingTalk != null) {
+        if (r.talkId.isNotEmpty && matchingTalk.qrCodeUrl.contains(r.talkId)) {
+          return true;
+        }
+        if (r.talkTitle.trim().isNotEmpty &&
+            r.talkTitle.trim().toLowerCase() ==
+                matchingTalk.title.trim().toLowerCase()) {
+          return true;
+        }
+      }
+      return false;
+    }).toList();
   }
 
   TalksState copyWith({

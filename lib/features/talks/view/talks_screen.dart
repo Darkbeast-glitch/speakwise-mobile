@@ -13,11 +13,24 @@ import 'package:speakwise_mobile/features/talks/viewmodel/talks_provider.dart';
 /// Segmented Switcher: [Feedback] & [My Speaking Sessions]
 /// Fully connected to Webapp Speaking Experiences & QR Generator
 /// ═══════════════════════════════════════════════════════════════
-class TalksScreen extends ConsumerWidget {
+class TalksScreen extends ConsumerStatefulWidget {
   const TalksScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TalksScreen> createState() => _TalksScreenState();
+}
+
+class _TalksScreenState extends ConsumerState<TalksScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(talksViewModelProvider.notifier).loadTalksData();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final talksState = ref.watch(talksViewModelProvider);
     final selectedTab = talksState.selectedTab;
 

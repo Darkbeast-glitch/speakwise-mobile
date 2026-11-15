@@ -251,7 +251,79 @@ class FeedbackTabView extends ConsumerWidget {
         const SizedBox(height: 12),
 
         // Feedback Review Cards List
-        if (reviews.isEmpty)
+        if (talksState.status == TalksStatus.loading && reviews.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+            alignment: Alignment.center,
+            child: Column(
+              children: [
+                const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: AppTheme.primaryAccent,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Loading attendee feedback...',
+                  style: AppTheme.font(
+                    color: AppTheme.textMuted,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else if (talksState.status == TalksStatus.error && reviews.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F110B),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AppTheme.errorRed.withValues(alpha: 0.3),
+              ),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.error_outline_rounded,
+                    color: AppTheme.errorRed, size: 36),
+                const SizedBox(height: 12),
+                Text(
+                  'Could not load feedback reviews',
+                  style: AppTheme.font(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  talksState.errorMessage ?? 'Please check your connection.',
+                  textAlign: TextAlign.center,
+                  style: AppTheme.font(
+                    color: AppTheme.textMuted,
+                    fontSize: 12,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ElevatedButton(
+                  onPressed: () => ref
+                      .read(talksViewModelProvider.notifier)
+                      .loadTalksData(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryAccent,
+                    foregroundColor: Colors.black,
+                    shape: const StadiumBorder(),
+                  ),
+                  child: const Text('Try Again'),
+                ),
+              ],
+            ),
+          )
+        else if (reviews.isEmpty)
           Container(
             padding: const EdgeInsets.all(28),
             decoration: BoxDecoration(

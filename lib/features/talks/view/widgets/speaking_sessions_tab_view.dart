@@ -130,7 +130,79 @@ class SpeakingSessionsTabView extends ConsumerWidget {
           const SizedBox(height: 14),
 
           // 3. Speaking Sessions Cards or Clean Empty State
-          if (talks.isEmpty)
+          if (talksState.status == TalksStatus.loading && talks.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
+              alignment: Alignment.center,
+              child: Column(
+                children: [
+                  const SizedBox(
+                    width: 28,
+                    height: 28,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppTheme.primaryAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading speaking experiences...',
+                    style: AppTheme.font(
+                      color: AppTheme.textMuted,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else if (talksState.status == TalksStatus.error && talks.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F110B),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: AppTheme.errorRed.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.error_outline_rounded,
+                      color: AppTheme.errorRed, size: 36),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Could not load speaking sessions',
+                    style: AppTheme.font(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    talksState.errorMessage ?? 'Please check your connection.',
+                    textAlign: TextAlign.center,
+                    style: AppTheme.font(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  ElevatedButton(
+                    onPressed: () => ref
+                        .read(talksViewModelProvider.notifier)
+                        .loadTalksData(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryAccent,
+                      foregroundColor: Colors.black,
+                      shape: const StadiumBorder(),
+                    ),
+                    child: const Text('Try Again'),
+                  ),
+                ],
+              ),
+            )
+          else if (talks.isEmpty)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
               decoration: BoxDecoration(
@@ -206,6 +278,25 @@ class SpeakingSessionsTabView extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _cleanHtml(String htmlString) {
+    if (htmlString.isEmpty) return '';
+    var text = htmlString;
+    text = text.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+    text = text.replaceAll(RegExp(r'</p>', caseSensitive: false), '\n\n');
+    text = text.replaceAll(RegExp(r'</li>', caseSensitive: false), '\n');
+    text = text.replaceAll(RegExp(r'<li>', caseSensitive: false), '• ');
+    text = text.replaceAll(RegExp(r'<[^>]*>'), '');
+    text = text
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&apos;', "'")
+        .replaceAll('&#39;', "'")
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>');
+    return text.replaceAll(RegExp(r'\n{3,}'), '\n\n').trim();
   }
 
   Widget _buildTalkCard(BuildContext context, WidgetRef ref, SpeakingTalk talk) {
@@ -383,7 +474,7 @@ class SpeakingSessionsTabView extends ConsumerWidget {
                 const SizedBox(height: 10),
 
                 Text(
-                  talk.description,
+                  _cleanHtml(talk.description),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: AppTheme.font(

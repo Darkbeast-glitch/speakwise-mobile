@@ -51,12 +51,12 @@ class _SpeakerProfileDetailsScreenState
       for (final evt in profile.eventsSpoken) {
         talks.add(SpeakerTalkItem(
           id: evt.id,
-          title: evt.topic.isNotEmpty ? evt.topic : '${evt.name} Keynote',
+          title: evt.topic.isNotEmpty ? evt.topic : '${evt.name} Talk',
           description: (evt.description != null && evt.description!.isNotEmpty)
               ? evt.description!
-              : 'Verified keynote presentation delivered at ${evt.name}.',
+              : 'Verified talk delivered at ${evt.name}.',
           duration: 45,
-          category: 'Keynote',
+          category: 'Talk',
           eventTitle: evt.name,
           eventId: evt.eventId,
           eventImage: evt.image,
@@ -67,39 +67,9 @@ class _SpeakerProfileDetailsScreenState
       }
     }
 
-    // 3. If still empty but talksGiven > 0, create verified session records
-    if (talks.isEmpty && profile.talksGiven > 0) {
-      final totalToGenerate = profile.talksGiven.clamp(1, 10);
-      final topics = profile.skills.isNotEmpty
-          ? profile.skills
-          : [
-              'Software Engineering',
-              'System Architecture',
-              'Community Leadership',
-              'Open Source Tech',
-            ];
-      final org = profile.organization.isNotEmpty
-          ? profile.organization
-          : 'Global Tech';
-
-      for (int i = 0; i < totalToGenerate; i++) {
-        final topic = topics[i % topics.length];
-        talks.add(SpeakerTalkItem(
-          id: 'talk-$i',
-          title: 'Keynote: Scalable $topic in Practice',
-          description:
-              'Delivered an interactive session sharing industry insights, case studies, and engineering strategies.',
-          duration: 45,
-          category: 'Keynote',
-          eventTitle: i == 0 ? '$org Summit' : 'Tech Conference ${2026 - (i % 3)}',
-          date: '2025-0${(i % 9) + 1}-15',
-        ));
-      }
-    }
-
     final displayName = profile.firstName.isNotEmpty
         ? profile.firstName
-        : 'Speaker';
+        : (profile.fullName.isNotEmpty ? profile.fullName : 'Speaker');
 
     showModalBottomSheet(
       context: context,
@@ -218,288 +188,7 @@ class _SpeakerProfileDetailsScreenState
                         separatorBuilder: (context, index) =>
                             const SizedBox(height: 12),
                         itemBuilder: (context, index) {
-                          final talk = talks[index];
-                          final hasSlides = talk.presentationLink != null &&
-                              talk.presentationLink!.trim().isNotEmpty;
-                          final hasVideo = talk.videoRecordingLink != null &&
-                              talk.videoRecordingLink!.trim().isNotEmpty;
-                          final hasEvent = talk.eventId != null &&
-                              talk.eventId!.trim().isNotEmpty;
-
-                          return Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1B1D1F),
-                              borderRadius: BorderRadius.circular(18),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.08),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        talk.title,
-                                        style: AppTheme.font(
-                                          color: Colors.white,
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: -0.2,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primaryAccent
-                                            .withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        '${talk.duration}m',
-                                        style: AppTheme.font(
-                                          color: AppTheme.primaryAccent,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                if (talk.eventTitle.isNotEmpty ||
-                                    (talk.date != null &&
-                                        talk.date!.isNotEmpty)) ...[
-                                  const SizedBox(height: 8),
-                                  Wrap(
-                                    spacing: 12,
-                                    runSpacing: 4,
-                                    children: [
-                                      if (talk.eventTitle.isNotEmpty)
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(
-                                              Icons.event_outlined,
-                                              color: AppTheme.primaryAccent,
-                                              size: 13,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              talk.eventTitle,
-                                              style: AppTheme.font(
-                                                color: AppTheme.primaryAccent,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      if (talk.date != null &&
-                                          talk.date!.isNotEmpty)
-                                        Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            const Icon(
-                                              Icons.calendar_today_outlined,
-                                              color: AppTheme.textMuted,
-                                              size: 12,
-                                            ),
-                                            const SizedBox(width: 4),
-                                            Text(
-                                              talk.date!,
-                                              style: AppTheme.font(
-                                                color: AppTheme.textMuted,
-                                                fontSize: 11.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                                if (talk.description.isNotEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    talk.description,
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: AppTheme.font(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.7,
-                                      ),
-                                      fontSize: 12.5,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ],
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(
-                                          alpha: 0.06,
-                                        ),
-                                        borderRadius: BorderRadius.circular(
-                                          AppTheme.radiusPill,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        talk.category,
-                                        style: AppTheme.font(
-                                          color: Colors.white70,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    if (hasSlides) ...[
-                                      GestureDetector(
-                                        onTap: () async {
-                                          final uri = Uri.tryParse(
-                                            talk.presentationLink!,
-                                          );
-                                          if (uri != null) {
-                                            await launchUrl(
-                                              uri,
-                                              mode: LaunchMode
-                                                  .externalApplication,
-                                            );
-                                          }
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppTheme.primaryAccent
-                                                .withValues(alpha: 0.15),
-                                            borderRadius:
-                                                BorderRadius.circular(AppTheme.radiusPill),
-                                            border: Border.all(
-                                              color: AppTheme.primaryAccent
-                                                  .withValues(alpha: 0.3),
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(
-                                                Icons.slideshow_rounded,
-                                                color: AppTheme.primaryAccent,
-                                                size: 13,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'Slides',
-                                                style: AppTheme.font(
-                                                  color: AppTheme.primaryAccent,
-                                                  fontSize: 11.5,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                    if (hasVideo) ...[
-                                      GestureDetector(
-                                        onTap: () async {
-                                          final uri = Uri.tryParse(
-                                            talk.videoRecordingLink!,
-                                          );
-                                          if (uri != null) {
-                                            await launchUrl(
-                                              uri,
-                                              mode: LaunchMode
-                                                  .externalApplication,
-                                            );
-                                          }
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.08,
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(AppTheme.radiusPill),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              const Icon(
-                                                Icons.play_circle_outline_rounded,
-                                                color: Colors.white70,
-                                                size: 13,
-                                              ),
-                                              const SizedBox(width: 4),
-                                              Text(
-                                                'Video',
-                                                style: AppTheme.font(
-                                                  color: Colors.white,
-                                                  fontSize: 11.5,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                    ],
-                                    if (hasEvent)
-                                      GestureDetector(
-                                        onTap: () {
-                                          Navigator.pop(ctx);
-                                          context.push(
-                                            '/event/${talk.eventId}',
-                                          );
-                                        },
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              'View Event',
-                                              style: AppTheme.font(
-                                                color: AppTheme.primaryAccent,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 3),
-                                            const Icon(
-                                              Icons.arrow_forward_rounded,
-                                              color: AppTheme.primaryAccent,
-                                              size: 13,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
+                          return _VerifiedTalkItemCard(talk: talks[index]);
                         },
                       ),
               ),
@@ -533,30 +222,18 @@ class _SpeakerProfileDetailsScreenState
                 ? profile.fullName
                 : (profile.firstName.isNotEmpty
                       ? profile.firstName
-                      : 'Julius Boakye');
+                      : 'Speaker');
             final firstName = profile.firstName.isNotEmpty
                 ? profile.firstName
-                : 'Julius';
-            final organization = profile.organization.isNotEmpty
-                ? profile.organization
-                : 'CEO, JNAB Tech Solutions';
-            final countryWithFlag = profile.country.isNotEmpty
-                ? '${profile.country} 🇬🇭'
-                : 'Accra, Ghana 🇬🇭';
+                : (profile.fullName.isNotEmpty
+                      ? profile.fullName.split(' ').first
+                      : 'Speaker');
+            final organization = profile.organization.trim();
+            final countryWithFlag = profile.country.trim();
             final bioText = profile.biography.isNotEmpty
                 ? profile.biography
-                : (profile.shortBio.isNotEmpty
-                      ? profile.shortBio
-                      : 'Julius Nana Acheampong Boakye is a prominent Ghanaian software engineer, tech community leader, and open-source champion based in Accra.');
-
-            final skills = profile.skills.isNotEmpty
-                ? profile.skills
-                : const [
-                    'FullStack Engineer',
-                    'Django Developer',
-                    'Flutter Developer',
-                    'Open Source',
-                  ];
+                : profile.shortBio;
+            final skills = profile.skills;
 
             return Column(
               children: [
@@ -735,30 +412,34 @@ class _SpeakerProfileDetailsScreenState
                                             letterSpacing: -0.4,
                                           ),
                                         ),
-                                        const SizedBox(height: 5),
-                                        Text(
-                                          organization,
-                                          textAlign: TextAlign.center,
-                                          style: AppTheme.font(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.75,
+                                        if (organization.isNotEmpty) ...[
+                                          const SizedBox(height: 5),
+                                          Text(
+                                            organization,
+                                            textAlign: TextAlign.center,
+                                            style: AppTheme.font(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.75,
+                                              ),
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w400,
                                             ),
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w400,
                                           ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          countryWithFlag,
-                                          textAlign: TextAlign.center,
-                                          style: AppTheme.font(
-                                            color: Colors.white.withValues(
-                                              alpha: 0.65,
+                                        ],
+                                        if (countryWithFlag.isNotEmpty) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            countryWithFlag,
+                                            textAlign: TextAlign.center,
+                                            style: AppTheme.font(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.65,
+                                              ),
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w400,
                                             ),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w400,
                                           ),
-                                        ),
+                                        ],
                                         if (profile.rankTier != null &&
                                             profile.rankTier!.trim().isNotEmpty) ...[
                                           const SizedBox(height: 8),
@@ -817,49 +498,51 @@ class _SpeakerProfileDetailsScreenState
                           const SizedBox(height: 14),
 
                           // 5. "About [FirstName]" Card
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(18),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF141416),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.08),
-                                width: 1,
+                          if (bioText.trim().isNotEmpty) ...[
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF141416),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.08),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'About $firstName',
+                                    style: AppTheme.font(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: -0.2,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 10),
+                                  Text(
+                                    bioText,
+                                    style: AppTheme.font(
+                                      color: const Color(0xFFB0B0B8),
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.w400,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'About $firstName',
-                                  style: AppTheme.font(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: -0.2,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                Text(
-                                  bioText,
-                                  style: AppTheme.font(
-                                    color: const Color(0xFFB0B0B8),
-                                    fontSize: 12.5,
-                                    fontWeight: FontWeight.w400,
-                                    height: 1.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 14),
+                            const SizedBox(height: 14),
+                          ],
 
                           // 6. "Skills and Experience" Card (Skills only!)
-                          _buildSkillsAndExperienceCard(skills),
-
-                          const SizedBox(height: 14),
+                          if (skills.isNotEmpty) ...[
+                            _buildSkillsAndExperienceCard(skills),
+                            const SizedBox(height: 14),
+                          ],
 
                           // 7. "Talks Given" Dedicated Card
                           _buildTalksGivenCard(context, profile),
@@ -1826,6 +1509,381 @@ class _SpeakerProfileDetailsScreenState
           ],
         );
       }).toList(),
+    );
+  }
+}
+
+/// ═══════════════════════════════════════════════════════════════
+/// Verified Talk Item Card with Expandable Description & Clean Rich Text
+/// ═══════════════════════════════════════════════════════════════
+class _VerifiedTalkItemCard extends StatefulWidget {
+  final SpeakerTalkItem talk;
+
+  const _VerifiedTalkItemCard({required this.talk});
+
+  @override
+  State<_VerifiedTalkItemCard> createState() => _VerifiedTalkItemCardState();
+}
+
+class _VerifiedTalkItemCardState extends State<_VerifiedTalkItemCard> {
+  bool _isExpanded = false;
+
+  String _cleanHtml(String htmlString) {
+    if (htmlString.isEmpty) return '';
+    var text = htmlString;
+    // Replace breaks, paragraphs and list items with clean formatting
+    text = text.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+    text = text.replaceAll(RegExp(r'</p>', caseSensitive: false), '\n\n');
+    text = text.replaceAll(RegExp(r'</li>', caseSensitive: false), '\n');
+    text = text.replaceAll(RegExp(r'<li>', caseSensitive: false), '• ');
+    // Strip all HTML tags
+    text = text.replaceAll(RegExp(r'<[^>]*>'), '');
+    // Decode HTML entities
+    text = text
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&apos;', "'")
+        .replaceAll('&#39;', "'")
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>');
+    // Collapse multi-newlines into clean paragraphs
+    text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
+    return text.trim();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final talk = widget.talk;
+    final cleanDesc = _cleanHtml(talk.description);
+    final hasSlides = talk.presentationLink != null && talk.presentationLink!.trim().isNotEmpty;
+    final hasVideo = talk.videoRecordingLink != null && talk.videoRecordingLink!.trim().isNotEmpty;
+    final hasEvent = talk.eventId != null && talk.eventId!.trim().isNotEmpty;
+    final isLong = cleanDesc.length > 110 || cleanDesc.contains('\n');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B1D1F),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.08),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  talk.title,
+                  style: AppTheme.font(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 3,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryAccent.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '${talk.duration}m',
+                  style: AppTheme.font(
+                    color: AppTheme.primaryAccent,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (talk.eventTitle.isNotEmpty ||
+              (talk.date != null && talk.date!.isNotEmpty)) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 12,
+              runSpacing: 4,
+              children: [
+                if (talk.eventTitle.isNotEmpty)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.event_outlined,
+                        color: AppTheme.primaryAccent,
+                        size: 13,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        talk.eventTitle,
+                        style: AppTheme.font(
+                          color: AppTheme.primaryAccent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                if (talk.date != null && talk.date!.isNotEmpty)
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.calendar_today_outlined,
+                        color: AppTheme.textMuted,
+                        size: 12,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        talk.date!,
+                        style: AppTheme.font(
+                          color: AppTheme.textMuted,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
+            ),
+          ],
+          if (cleanDesc.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            GestureDetector(
+              onTap: isLong
+                  ? () {
+                      HapticFeedback.selectionClick();
+                      setState(() => _isExpanded = !_isExpanded);
+                    }
+                  : null,
+              child: AnimatedCrossFade(
+                firstChild: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cleanDesc,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTheme.font(
+                        color: Colors.white.withValues(alpha: 0.78),
+                        fontSize: 12.5,
+                        height: 1.45,
+                      ),
+                    ),
+                    if (isLong) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'See more...',
+                            style: AppTheme.font(
+                              color: AppTheme.primaryAccent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          const SizedBox(width: 2),
+                          const Icon(
+                            Icons.keyboard_arrow_down_rounded,
+                            color: AppTheme.primaryAccent,
+                            size: 14,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+                secondChild: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      cleanDesc,
+                      style: AppTheme.font(
+                        color: Colors.white.withValues(alpha: 0.88),
+                        fontSize: 12.5,
+                        height: 1.45,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'See less',
+                          style: AppTheme.font(
+                            color: AppTheme.primaryAccent,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(width: 2),
+                        const Icon(
+                          Icons.keyboard_arrow_up_rounded,
+                          color: AppTheme.primaryAccent,
+                          size: 14,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                crossFadeState:
+                    _isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                duration: const Duration(milliseconds: 220),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                ),
+                child: Text(
+                  'Talk',
+                  style: AppTheme.font(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (hasSlides) ...[
+                GestureDetector(
+                  onTap: () async {
+                    final uri = Uri.tryParse(talk.presentationLink!);
+                    if (uri != null) {
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryAccent.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                      border: Border.all(
+                        color: AppTheme.primaryAccent.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.slideshow_rounded,
+                          color: AppTheme.primaryAccent,
+                          size: 13,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Slides',
+                          style: AppTheme.font(
+                            color: AppTheme.primaryAccent,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              if (hasVideo) ...[
+                GestureDetector(
+                  onTap: () async {
+                    final uri = Uri.tryParse(talk.videoRecordingLink!);
+                    if (uri != null) {
+                      await launchUrl(
+                        uri,
+                        mode: LaunchMode.externalApplication,
+                      );
+                    }
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.play_circle_outline_rounded,
+                          color: Colors.white70,
+                          size: 13,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Video',
+                          style: AppTheme.font(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              if (hasEvent)
+                GestureDetector(
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/event/${talk.eventId}');
+                  },
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'View Event',
+                        style: AppTheme.font(
+                          color: AppTheme.primaryAccent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 3),
+                      const Icon(
+                        Icons.arrow_forward_rounded,
+                        color: AppTheme.primaryAccent,
+                        size: 13,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
