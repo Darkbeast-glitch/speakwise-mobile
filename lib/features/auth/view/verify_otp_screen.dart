@@ -59,8 +59,13 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
             backgroundColor: AppTheme.primaryAccent,
           ),
         );
-        await ref.read(storageServiceProvider).setHasSeenOnboarding(true);
-        context.go('/shell');
+        final storage = ref.read(storageServiceProvider);
+        await storage.setHasSeenOnboarding(true);
+        if (storage.isAuthenticated) {
+          context.go('/shell');
+        } else {
+          context.go('/auth/login?email=${Uri.encodeComponent(widget.email)}');
+        }
       }
     } catch (e) {
       debugPrint('OTP verify error: $e');

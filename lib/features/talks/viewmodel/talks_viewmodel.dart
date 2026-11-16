@@ -192,4 +192,35 @@ class TalksViewModel extends StateNotifier<TalksState> {
 
     return saved;
   }
+
+  Future<bool> deleteTalk(String talkId) async {
+    try {
+      await _repository.deleteSpeakingTalk(talkId);
+      final updatedTalks = state.talks.where((t) => t.id != talkId).toList();
+      final updatedReviews = state.allReviews.where((r) => r.talkId != talkId).toList();
+
+      final newFilterId = state.selectedTalkFilterId == talkId ? 'all' : state.selectedTalkFilterId;
+      state = state.copyWith(
+        talks: updatedTalks,
+        allReviews: updatedReviews,
+        selectedTalkFilterId: newFilterId,
+      );
+
+      final analysis = await _repository.getDimensionAnalysis(
+        talkId: newFilterId == 'all' ? null : newFilterId,
+      );
+      state = state.copyWith(dimensionAnalysis: analysis);
+
+      // Update cache
+      await _cacheManager.put(_cacheKey, {
+        'talks': updatedTalks.map((t) => t.toJson()).toList(),
+        'allReviews': updatedReviews.map((r) => r.toJson()).toList(),
+        'dimensionAnalysis': analysis.toJson(),
+      });
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting talk: $e');
+      return false;
+    }
+  }
 }

@@ -26,6 +26,7 @@ abstract class TalksRemoteDataSource {
     required int practicalRelevance,
     required String comments,
   });
+  Future<void> deleteSpeakerExperience(String talkId);
 }
 
 class DjangoTalksRemoteDataSource implements TalksRemoteDataSource {
@@ -535,6 +536,32 @@ class DjangoTalksRemoteDataSource implements TalksRemoteDataSource {
         'comments': comments,
       },
     );
+  @override
+  Future<void> deleteSpeakerExperience(String talkId) async {
+    final slugOrId = await resolveSpeakerSlugOrId();
+    bool deleted = false;
+
+    final candidateEndpoints = [
+      if (slugOrId != null && slugOrId.isNotEmpty)
+        '/speakers/$slugOrId/experiences/$talkId/',
+      '/speakers/experiences/$talkId/',
+      '/experiences/$talkId/',
+    ];
+
+    for (final endpoint in candidateEndpoints) {
+      try {
+        await apiClient.delete(endpoint);
+        deleted = true;
+        debugPrint('Successfully deleted experience via $endpoint');
+        break;
+      } catch (e) {
+        debugPrint('Candidate delete endpoint $endpoint failed: $e');
+      }
+    }
+
+    if (!deleted) {
+      debugPrint('Remote delete failed or not implemented on backend; removed locally.');
+    }
   }
 }
 

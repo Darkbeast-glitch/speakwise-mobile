@@ -5,24 +5,54 @@ import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/core/widgets/app_shimmer.dart';
 import 'package:speakwise_mobile/core/widgets/user_avatar.dart';
 import 'package:speakwise_mobile/features/talks/data/models/talk_model.dart';
+import 'package:speakwise_mobile/features/talks/view/widgets/feedback_pie_chart.dart';
 import 'package:speakwise_mobile/features/talks/viewmodel/talks_provider.dart';
 import 'package:speakwise_mobile/features/talks/viewmodel/talks_state.dart';
 
 /// ═══════════════════════════════════════════════════════════════
 /// Feedback Tab View
-/// Dimension Analysis Breakdown + Talk Filter + Attendee Reviews Stream
+/// Dimension Analysis Breakdown + Donut Pie Chart + Searchable Talk Filter + Attendee Reviews Stream
 /// (Directly matching Webapp Dashboard in Image 2)
 /// ═══════════════════════════════════════════════════════════════
-class FeedbackTabView extends ConsumerWidget {
+class FeedbackTabView extends ConsumerStatefulWidget {
   const FeedbackTabView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FeedbackTabView> createState() => _FeedbackTabViewState();
+}
+
+class _FeedbackTabViewState extends ConsumerState<FeedbackTabView> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final talksState = ref.watch(talksViewModelProvider);
     final analysis = talksState.dimensionAnalysis;
     final reviews = talksState.filteredReviews;
     final talks = talksState.talks;
     final selectedFilterId = talksState.selectedTalkFilterId;
+
+    // Filter talks list by search query
+    final filteredTalks = talks.where((t) {
+      if (_searchQuery.trim().isEmpty) return true;
+      final q = _searchQuery.trim().toLowerCase();
+      return t.title.toLowerCase().contains(q) ||
+          t.eventName.toLowerCase().contains(q);
+    }).toList();
+
+    final selectedTalk = selectedFilterId != 'all'
+        ? talks.cast<SpeakingTalk?>().firstWhere(
+            (t) => t?.id == selectedFilterId,
+            orElse: () => null,
+          )
+        : null;
 
     double prog(double score) => (score / 10.0).clamp(0.0, 1.0);
     String pct(double score) {
@@ -165,89 +195,253 @@ class FeedbackTabView extends ConsumerWidget {
             ),
           ),
 
-        const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-        // 2. Filter by Talk Horizontal Pills
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Filter by Talk',
-              style: AppTheme.font(
-                color: AppTheme.textPrimary,
-                fontSize: 15.5,
-                fontWeight: FontWeight.w700,
+          // 2. Feedback Metrics Pie / Donut Chart
+          FeedbackMetricsPieChart(
+            analysis: analysis,
+            reviews: reviews,
+          ),
+
+          const SizedBox(height: 20),
+
+          // 3. Filter by Talk Section with Search Input
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Filter by Talk',
+                    style: AppTheme.font(
+                      color: AppTheme.textPrimary,
+                      fontSize: 15.5,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                    ),
+                    child: Text(
+                      '${talks.length} sessions',
+                      style: AppTheme.font(
+                        color: AppTheme.textMuted,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ),
-            if (selectedFilterId != 'all')
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  ref.read(talksViewModelProvider.notifier).setFilterTalkId('all');
-                },
-                child: Text(
-                  'Reset filter',
-                  style: AppTheme.font(
-                    color: AppTheme.primaryAccent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+              if (selectedFilterId != 'all')
+                GestureDetector(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    ref.read(talksViewModelProvider.notifier).setFilterTalkId('all');
+                  },
+                  child: Text(
+                    'Reset filter',
+                    style: AppTheme.font(
+                      color: AppTheme.primaryAccent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-              ),
-          ],
-        ),
-
-        const SizedBox(height: 10),
-
-        SizedBox(
-          height: 38,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            children: [
-              _filterChip(
-                ref: ref,
-                id: 'all',
-                label: 'All Talks (${talksState.allReviews.length})',
-                isSelected: selectedFilterId == 'all',
-              ),
-              ...talks.map((talk) {
-                final shortTitle = talk.title.length > 28
-                    ? '${talk.title.substring(0, 26)}...'
-                    : talk.title;
-                return _filterChip(
-                  ref: ref,
-                  id: talk.id,
-                  label: shortTitle,
-                  isSelected: selectedFilterId == talk.id,
-                );
-              }),
             ],
           ),
-        ),
 
-        const SizedBox(height: 20),
+          const SizedBox(height: 10),
 
-        // 3. Recent Feedback Stream Header
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Attendee Reviews & Ratings',
-              style: AppTheme.font(
-                color: AppTheme.textPrimary,
-                fontSize: 16.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.2,
+          // Search Field for Talk (instant typing filter for 100+ talks)
+          Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F110B),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.09),
               ),
             ),
-            Text(
-              '${reviews.length} reviews',
-              style: AppTheme.font(
-                color: AppTheme.textMuted,
-                fontSize: 12,
+            child: Row(
+              children: [
+                const SizedBox(width: 12),
+                const Icon(
+                  Icons.search_rounded,
+                  color: AppTheme.textMuted,
+                  size: 19,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    style: AppTheme.font(color: Colors.white, fontSize: 13),
+                    cursorColor: AppTheme.primaryAccent,
+                    decoration: InputDecoration(
+                      hintText: 'Search talk by topic or event...',
+                      hintStyle: AppTheme.font(color: AppTheme.textMuted, fontSize: 13),
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
+                    onChanged: (val) {
+                      setState(() => _searchQuery = val);
+                    },
+                  ),
+                ),
+                if (_searchQuery.isNotEmpty)
+                  GestureDetector(
+                    onTap: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Icon(
+                        Icons.close_rounded,
+                        color: Colors.white.withValues(alpha: 0.6),
+                        size: 17,
+                      ),
+                    ),
+                  ),
+                // Full bottom sheet talk picker button
+                GestureDetector(
+                  onTap: () => _showTalkPickerBottomSheet(context, talks, selectedFilterId),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161811),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.format_list_bulleted_rounded,
+                            color: AppTheme.primaryAccent, size: 14),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Browse',
+                          style: AppTheme.font(
+                            color: AppTheme.primaryAccent,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Active Selected Talk Callout Pill
+          if (selectedTalk != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryAccent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.primaryAccent.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_rounded, color: AppTheme.primaryAccent, size: 15),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Filtered: ${selectedTalk.title}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTheme.font(
+                        color: AppTheme.primaryAccent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      ref.read(talksViewModelProvider.notifier).setFilterTalkId('all');
+                    },
+                    child: const Icon(Icons.close_rounded, color: AppTheme.primaryAccent, size: 16),
+                  ),
+                ],
               ),
             ),
           ],
+
+          const SizedBox(height: 10),
+
+          // Horizontal Filter Chips (dynamically filtered by search)
+          SizedBox(
+            height: 38,
+            child: filteredTalks.isEmpty && _searchQuery.isNotEmpty
+                ? Center(
+                    child: Text(
+                      'No talks matching "$_searchQuery"',
+                      style: AppTheme.font(
+                        color: AppTheme.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                  )
+                : ListView(
+                    scrollDirection: Axis.horizontal,
+                    children: [
+                      if (_searchQuery.isEmpty)
+                        _filterChip(
+                          ref: ref,
+                          id: 'all',
+                          label: 'All Talks (${talksState.allReviews.length})',
+                          isSelected: selectedFilterId == 'all',
+                        ),
+                      ...filteredTalks.map((talk) {
+                        final shortTitle = talk.title.length > 28
+                            ? '${talk.title.substring(0, 26)}...'
+                            : talk.title;
+                        return _filterChip(
+                          ref: ref,
+                          id: talk.id,
+                          label: shortTitle,
+                          isSelected: selectedFilterId == talk.id,
+                        );
+                      }),
+                    ],
+                  ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // 4. Recent Feedback Stream Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Attendee Reviews & Ratings',
+                style: AppTheme.font(
+                  color: AppTheme.textPrimary,
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              Text(
+                '${reviews.length} reviews',
+                style: AppTheme.font(
+                  color: AppTheme.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
         ),
 
         const SizedBox(height: 12),
@@ -512,6 +706,227 @@ class FeedbackTabView extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showTalkPickerBottomSheet(
+    BuildContext context,
+    List<SpeakingTalk> talks,
+    String selectedFilterId,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        String sheetSearch = '';
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final filtered = talks.where((t) {
+              if (sheetSearch.trim().isEmpty) return true;
+              final q = sheetSearch.trim().toLowerCase();
+              return t.title.toLowerCase().contains(q) ||
+                  t.eventName.toLowerCase().contains(q);
+            }).toList();
+
+            return Container(
+              height: MediaQuery.of(context).size.height * 0.75,
+              decoration: const BoxDecoration(
+                color: Color(0xFF0F110B),
+                borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                20,
+                16,
+                20,
+                MediaQuery.of(context).viewPadding.bottom + 16,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Select Talk to Filter',
+                        style: AppTheme.font(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Search Input in Sheet
+                  Container(
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161811),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search_rounded, color: AppTheme.textMuted, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextField(
+                            style: AppTheme.font(color: Colors.white, fontSize: 13),
+                            cursorColor: AppTheme.primaryAccent,
+                            decoration: InputDecoration(
+                              hintText: 'Search through all ${talks.length} talks...',
+                              hintStyle: AppTheme.font(color: AppTheme.textMuted, fontSize: 13),
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
+                            onChanged: (val) {
+                              setSheetState(() => sheetSearch = val);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Option: All Talks
+                  ListTile(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    tileColor: selectedFilterId == 'all'
+                        ? AppTheme.primaryAccent.withValues(alpha: 0.12)
+                        : const Color(0xFF141610),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: selectedFilterId == 'all'
+                            ? AppTheme.primaryAccent
+                            : Colors.white.withValues(alpha: 0.06),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.all_inclusive_rounded,
+                        color: selectedFilterId == 'all' ? Colors.black : Colors.white,
+                        size: 16,
+                      ),
+                    ),
+                    title: Text(
+                      'All Talks & Reviews',
+                      style: AppTheme.font(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Aggregated metrics across all presentations',
+                      style: AppTheme.font(color: AppTheme.textMuted, fontSize: 11.5),
+                    ),
+                    trailing: selectedFilterId == 'all'
+                        ? const Icon(Icons.check_circle_rounded, color: AppTheme.primaryAccent, size: 20)
+                        : null,
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      ref.read(talksViewModelProvider.notifier).setFilterTalkId('all');
+                      Navigator.pop(ctx);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  // List of Talks
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No talks found',
+                              style: AppTheme.font(color: AppTheme.textMuted),
+                            ),
+                          )
+                        : ListView.separated(
+                            itemCount: filtered.length,
+                            separatorBuilder: (_, __) => const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final talk = filtered[index];
+                              final isSelected = selectedFilterId == talk.id;
+                              return ListTile(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                  side: BorderSide(
+                                    color: isSelected
+                                        ? AppTheme.primaryAccent.withValues(alpha: 0.5)
+                                        : Colors.white.withValues(alpha: 0.05),
+                                  ),
+                                ),
+                                tileColor: isSelected
+                                    ? AppTheme.primaryAccent.withValues(alpha: 0.1)
+                                    : const Color(0xFF141610),
+                                title: Text(
+                                  talk.title,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTheme.font(
+                                    color: Colors.white,
+                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                    fontSize: 13.5,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        talk.eventName,
+                                        style: AppTheme.font(
+                                          color: AppTheme.primaryAccent,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        '• ${talk.eventDate}',
+                                        style: AppTheme.font(
+                                          color: AppTheme.textMuted,
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                trailing: isSelected
+                                    ? const Icon(Icons.check_circle_rounded,
+                                        color: AppTheme.primaryAccent, size: 20)
+                                    : const Icon(Icons.chevron_right_rounded,
+                                        color: AppTheme.textMuted, size: 20),
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  ref.read(talksViewModelProvider.notifier).setFilterTalkId(talk.id);
+                                  Navigator.pop(ctx);
+                                },
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

@@ -159,9 +159,36 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     } catch (e) {
       debugPrint('Registration error: $e');
       if (mounted) {
-        final message = e is ApiException
-            ? e.message
-            : 'Registration failed. Please check your details or server connection.';
+        String message;
+        if (e is ApiException) {
+          final raw = e.message;
+          final lower = raw.toLowerCase();
+          if (lower.contains('future not completed') ||
+              lower.contains('timeout') ||
+              lower.contains('timed out') ||
+              e.statusCode == 408) {
+            message =
+                'Connection timed out. The server took too long to respond. Please check your internet connection and try again.';
+          } else if (lower.contains('cannot reach server') ||
+              lower.contains('socketexception') ||
+              lower.contains('failed host lookup') ||
+              lower.contains('connection refused') ||
+              lower.contains('network is unreachable')) {
+            message =
+                'Unable to connect to SpeakWise server. Please check your internet connection.';
+          } else {
+            message = raw;
+          }
+        } else {
+          final errStr = e.toString().toLowerCase();
+          if (errStr.contains('future not completed') || errStr.contains('timeout')) {
+            message =
+                'Connection timed out. Please check your internet connection and try again.';
+          } else {
+            message =
+                'Registration failed. Please check your details or server connection.';
+          }
+        }
         _showErrorSnackBar(message);
       }
     } finally {
@@ -398,7 +425,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
                 const SizedBox(height: 18),
 
-                // 6. Social Buttons (Light Gray Stadium Pills)
+                // 6. Social Buttons (Disabled)
                 Row(
                   children: [
                     SocialPillButton(
@@ -407,12 +434,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         width: 22,
                         height: 22,
                       ),
-                      onTap: () => context.go('/shell'),
+                      enabled: false,
+                      onTap: () => _onSocialDisabledTap('Google'),
                     ),
                     const SizedBox(width: 14),
                     SocialPillButton(
                       icon: const GithubLogo(size: 22, color: Colors.black),
-                      onTap: () => context.go('/shell'),
+                      enabled: false,
+                      onTap: () => _onSocialDisabledTap('GitHub'),
                     ),
                   ],
                 ),
@@ -421,6 +450,27 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _onSocialDisabledTap(String provider) {
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '$provider sign-in is currently disabled. Please use your email.',
+          style: AppTheme.font(
+            color: Colors.white,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: const Color(0xFF1E1F24),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
     );

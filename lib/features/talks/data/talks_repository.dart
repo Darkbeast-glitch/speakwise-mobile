@@ -7,6 +7,7 @@ abstract class TalksRepository {
   Future<List<FeedbackReview>> getFeedbackReviews({String? talkId});
   Future<DimensionAnalysis> getDimensionAnalysis({String? talkId});
   Future<SpeakingTalk> addSpeakingTalk(SpeakingTalk talk);
+  Future<void> deleteSpeakingTalk(String talkId);
 }
 
 class MockTalksRepository implements TalksRepository {
@@ -205,6 +206,12 @@ class MockTalksRepository implements TalksRepository {
     _talks.insert(0, talk);
     return talk;
   }
+
+  @override
+  Future<void> deleteSpeakingTalk(String talkId) async {
+    _talks.removeWhere((t) => t.id == talkId);
+    _reviews.removeWhere((r) => r.talkId == talkId);
+  }
 }
 
 class DjangoTalksRepositoryImpl implements TalksRepository {
@@ -373,5 +380,10 @@ class DjangoTalksRepositoryImpl implements TalksRepository {
       description: talk.description,
       presentationLink: talk.presentationUrl,
     );
+  }
+
+  @override
+  Future<void> deleteSpeakingTalk(String talkId) async {
+    await remoteDataSource.deleteSpeakerExperience(talkId);
   }
 }

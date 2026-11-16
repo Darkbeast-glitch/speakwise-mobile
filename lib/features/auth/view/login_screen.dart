@@ -105,9 +105,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     } catch (e) {
       debugPrint('Django Auth Login failed: $e');
       if (mounted) {
-        final message = e is ApiException
-            ? e.message
-            : 'Unable to sign in. Please check your credentials or network connection.';
+        final message = _formatLoginErrorMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -131,6 +129,70 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  String _formatLoginErrorMessage(dynamic error) {
+    if (error is ApiException) {
+      final raw = error.message;
+      final lower = raw.toLowerCase();
+
+      if (lower.contains('future not completed') ||
+          lower.contains('timeoutexception') ||
+          lower.contains('timed out') ||
+          error.statusCode == 408) {
+        return 'Connection timed out. The server is taking longer than usual to respond. Please check your internet connection and try again.';
+      }
+
+      if (lower.contains('cannot reach server') ||
+          lower.contains('socketexception') ||
+          lower.contains('failed host lookup') ||
+          lower.contains('connection refused') ||
+          lower.contains('network is unreachable')) {
+        return 'Unable to reach SpeakWise server. Please check your internet connection.';
+      }
+
+      if (error.statusCode == 401 ||
+          (error.statusCode == 400 &&
+              (lower.contains('credential') ||
+                  lower.contains('password') ||
+                  lower.contains('no active account') ||
+                  lower.contains('user not found') ||
+                  lower.contains('invalid')))) {
+        return 'Incorrect email or password. Please verify your credentials.';
+      }
+
+      if (raw.trim().isNotEmpty && !raw.startsWith('ApiException')) {
+        return raw;
+      }
+    }
+
+    final str = error.toString().toLowerCase();
+    if (str.contains('future not completed') || str.contains('timeout')) {
+      return 'Connection timed out. The server took too long to respond. Please check your internet connection and try again.';
+    }
+
+    return 'Unable to sign in. Please check your credentials or network connection.';
+  }
+
+  void _onSocialDisabledTap(String provider) {
+    HapticFeedback.lightImpact();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '$provider sign-in is currently disabled. Please sign in with your email.',
+          style: AppTheme.font(
+            color: Colors.white,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: const Color(0xFF1E1F24),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
   }
 
   @override
@@ -349,7 +411,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 const SizedBox(height: 20),
 
-                // 9. Social Buttons (Light Gray Stadium Pills)
+                // 9. Social Buttons (Disabled)
                 Row(
                   children: [
                     SocialPillButton(
@@ -358,12 +420,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         width: 30,
                         height: 30,
                       ),
-                      onTap: () => context.go('/shell'),
+                      enabled: false,
+                      onTap: () => _onSocialDisabledTap('Google'),
                     ),
                     const SizedBox(width: 14),
                     SocialPillButton(
                       icon: const GithubLogo(size: 22, color: Colors.black),
-                      onTap: () => context.go('/shell'),
+                      enabled: false,
+                      onTap: () => _onSocialDisabledTap('GitHub'),
                     ),
                   ],
                 ),

@@ -72,30 +72,11 @@ final routerProvider = Provider<GoRouter>((ref) {
               return ForgotPasswordScreen(initialEmail: email);
             },
           ),
-          GoRoute(
-            path: 'reset-password-confirm',
-            builder: (context, state) {
-              final email = state.uri.queryParameters['email'] ?? '';
-              final token = state.uri.queryParameters['token'] ?? '';
-              return ResetPasswordConfirmScreen(
-                initialEmail: email,
-                initialToken: token,
-              );
-            },
-          ),
         ],
       ),
-      // Deep link alias matching backend email template: /reset-password?token=...&email=...
       GoRoute(
         path: '/reset-password',
-        builder: (context, state) {
-          final email = state.uri.queryParameters['email'] ?? '';
-          final token = state.uri.queryParameters['token'] ?? '';
-          return ResetPasswordConfirmScreen(
-            initialEmail: email,
-            initialToken: token,
-          );
-        },
+        redirect: (context, state) => '/auth/login',
       ),
       GoRoute(
         path: '/shell',

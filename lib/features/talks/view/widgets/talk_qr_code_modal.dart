@@ -1,6 +1,10 @@
+import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/features/talks/data/models/talk_model.dart';
 
@@ -23,6 +27,124 @@ class TalkQrCodeModal extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (ctx) => TalkQrCodeModal(talk: talk),
     );
+  }
+
+  Future<void> _shareLink(BuildContext context) async {
+    HapticFeedback.lightImpact();
+    await Clipboard.setData(ClipboardData(text: talk.qrCodeUrl));
+
+    final box = context.findRenderObject() as RenderBox?;
+    final originRect = box != null
+        ? box.localToGlobal(Offset.zero) & box.size
+        : const Rect.fromLTWH(0, 0, 100, 100);
+
+    try {
+      await Share.share(
+        'Please rate my presentation "${talk.title}" at ${talk.eventName}:\n${talk.qrCodeUrl}',
+        subject: 'Feedback Link for ${talk.title}',
+        sharePositionOrigin: originRect,
+      );
+    } catch (e) {
+      debugPrint('Share link notice: $e');
+    }
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.black, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Feedback link copied to clipboard & sharing opened!',
+                  style: AppTheme.font(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: AppTheme.primaryAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+
+  Future<void> _downloadQr(BuildContext context) async {
+    HapticFeedback.mediumImpact();
+    try {
+      final qrValidationResult = QrValidator.validate(
+        data: talk.qrCodeUrl,
+        version: QrVersions.auto,
+        errorCorrectionLevel: QrErrorCorrectLevel.M,
+      );
+
+      if (qrValidationResult.status == QrValidationStatus.valid) {
+        final qrCode = qrValidationResult.qrCode!;
+        final painter = QrPainter.withQr(
+          qr: qrCode,
+          color: const Color(0xFF000000),
+          emptyColor: const Color(0xFFFFFFFF),
+          gapless: true,
+        );
+
+        final picData = await painter.toImageData(1024, format: ui.ImageByteFormat.png);
+        if (picData != null) {
+          final bytes = picData.buffer.asUint8List();
+          final tempDir = await getTemporaryDirectory();
+          final cleanId = talk.id.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+          final fileName = 'speakwise_qr_$cleanId.png';
+          final file = File('${tempDir.path}/$fileName');
+          await file.writeAsBytes(bytes);
+
+          if (context.mounted) {
+            final box = context.findRenderObject() as RenderBox?;
+            final originRect = box != null
+                ? box.localToGlobal(Offset.zero) & box.size
+                : const Rect.fromLTWH(0, 0, 100, 100);
+
+            await Share.shareXFiles(
+              [XFile(file.path, mimeType: 'image/png', name: fileName)],
+              text: 'Feedback QR Code for "${talk.title}" at ${talk.eventName}',
+              sharePositionOrigin: originRect,
+            );
+
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(Icons.download_done_rounded, color: Colors.black, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'QR Code ready! Select "Save Image" or choose an app to share.',
+                          style: AppTheme.font(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                  backgroundColor: AppTheme.primaryAccent,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              );
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Download QR error: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not download QR: $e', style: AppTheme.font(color: Colors.white)),
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -232,21 +354,7 @@ class TalkQrCodeModal extends StatelessWidget {
                       side: BorderSide(color: Colors.white.withValues(alpha: 0.2)),
                       shape: const StadiumBorder(),
                     ),
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      Clipboard.setData(ClipboardData(text: talk.qrCodeUrl));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Feedback link copied to clipboard!',
-                            style: AppTheme.font(color: Colors.black, fontWeight: FontWeight.w600),
-                          ),
-                          backgroundColor: AppTheme.primaryAccent,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      );
-                    },
+                    onPressed: () => _shareLink(context),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -277,26 +385,7 @@ class TalkQrCodeModal extends StatelessWidget {
                       foregroundColor: Colors.black,
                       shape: const StadiumBorder(),
                     ),
-                    onPressed: () {
-                      HapticFeedback.mediumImpact();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              const Icon(Icons.check_circle_rounded, color: Colors.black, size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'QR Code image saved to Gallery!',
-                                style: AppTheme.font(color: Colors.black, fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                          backgroundColor: AppTheme.primaryAccent,
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                      );
-                    },
+                    onPressed: () => _downloadQr(context),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

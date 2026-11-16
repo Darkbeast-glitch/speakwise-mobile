@@ -97,12 +97,12 @@ class AuthGatewayScreen extends ConsumerWidget {
 
                           const Spacer(flex: 3),
 
-                          // 4. White Pill: "Continue with Email"
+                          // 4. Primary Neon Lime Pill: "Continue with Email"
                           SizedBox(
                             width: double.infinity,
                             height: 52,
                             child: Material(
-                              color: Colors.white,
+                              color: AppTheme.primaryAccent,
                               shape: const StadiumBorder(),
                               child: InkWell(
                                 customBorder: const StadiumBorder(),
@@ -136,38 +136,61 @@ class AuthGatewayScreen extends ConsumerWidget {
 
                           const SizedBox(height: 14),
 
-                          // 5. Electric Neon Lime Pill: "Continue with Google"
+                          // 5. Disabled Social Pill: "Continue with Google"
                           SizedBox(
                             width: double.infinity,
                             height: 52,
                             child: Material(
-                              color: AppTheme.primaryAccent,
-                              shape: const StadiumBorder(),
+                              color: Colors.white.withValues(alpha: 0.08),
+                              shape: StadiumBorder(
+                                side: BorderSide(
+                                  color: Colors.white.withValues(alpha: 0.12),
+                                ),
+                              ),
                               child: InkWell(
                                 customBorder: const StadiumBorder(),
                                 onTap: () {
                                   HapticFeedback.lightImpact();
-                                  context.go('/shell');
-                                },
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                      'assets/images/googlelogo.png',
-                                      width: 20,
-                                      height: 20,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      'Continue with Google',
-                                      style: AppTheme.font(
-                                        color: Colors.black,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: -0.1,
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Google sign-in is currently disabled. Please continue with Email.',
+                                        style: AppTheme.font(
+                                          color: Colors.white,
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      backgroundColor: const Color(0xFF1E1F24),
+                                      behavior: SnackBarBehavior.floating,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
-                                  ],
+                                  );
+                                },
+                                child: Opacity(
+                                  opacity: 0.45,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        'assets/images/googlelogo.png',
+                                        width: 20,
+                                        height: 20,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'Continue with Google',
+                                        style: AppTheme.font(
+                                          color: Colors.white70,
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: -0.1,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),

@@ -8,11 +8,13 @@ import 'package:speakwise_mobile/app/app_theme.dart';
 class SocialPillButton extends StatelessWidget {
   final Widget icon;
   final VoidCallback? onTap;
+  final bool enabled;
 
   const SocialPillButton({
     super.key,
     required this.icon,
     this.onTap,
+    this.enabled = false,
   });
 
   @override
@@ -21,16 +23,41 @@ class SocialPillButton extends StatelessWidget {
       child: SizedBox(
         height: 48,
         child: Material(
-          color: const Color(0xFFDCDCDC),
+          color: enabled
+              ? const Color(0xFFDCDCDC)
+              : const Color(0xFFDCDCDC).withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(AppTheme.radiusPill),
           child: InkWell(
             borderRadius: BorderRadius.circular(AppTheme.radiusPill),
             onTap: () {
               HapticFeedback.lightImpact();
-              onTap?.call();
+              if (onTap != null) {
+                onTap!();
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Social sign-in is currently disabled. Please sign in with email.',
+                      style: AppTheme.font(
+                        color: Colors.white,
+                        fontSize: 13.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    backgroundColor: const Color(0xFF1E1F24),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                );
+              }
             },
-            child: Center(
-              child: icon,
+            child: Opacity(
+              opacity: enabled ? 1.0 : 0.45,
+              child: Center(
+                child: icon,
+              ),
             ),
           ),
         ),

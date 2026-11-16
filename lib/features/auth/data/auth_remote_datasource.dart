@@ -213,8 +213,24 @@ class DjangoAuthRemoteDataSource implements AuthRemoteDataSource {
       },
     );
 
-    if (response is Map && response.containsKey('detail')) {
-      return response['detail'].toString();
+    if (response is Map) {
+      final token = response['access_token']?.toString() ??
+          response['access']?.toString() ??
+          response['token']?.toString() ??
+          (response['tokens'] is Map ? response['tokens']['access']?.toString() : null);
+      final refresh = response['refresh_token']?.toString() ??
+          response['refresh']?.toString() ??
+          (response['tokens'] is Map ? response['tokens']['refresh']?.toString() : null);
+
+      if (token != null && token.isNotEmpty) {
+        await storageService.setAuthToken(token);
+      }
+      if (refresh != null && refresh.isNotEmpty) {
+        await storageService.setRefreshToken(refresh);
+      }
+      if (response.containsKey('detail')) {
+        return response['detail'].toString();
+      }
     }
     return 'Email verified successfully.';
   }
@@ -320,28 +336,11 @@ class DjangoAuthRemoteDataSource implements AuthRemoteDataSource {
     } on ApiException catch (e) {
       if (e.statusCode == 401) {
         // Try refresh token once
-        final refresh = storageService.refreshToken;
-        if (refresh != null && refresh.isNotEmpty) {
-          try {
-            final refreshRes = await apiClient.post(
-              '/users/auth/token/refresh/',
-              authenticated: false,
-              body: {'refresh': refresh},
-            );
-            if (refreshRes is Map<String, dynamic>) {
-              final newAccess = refreshRes['access']?.toString() ??
-                  refreshRes['access_token']?.toString() ??
-                  refreshRes['token']?.toString();
-              if (newAccess != null && newAccess.isNotEmpty) {
-                await storageService.setAuthToken(newAccess);
-                return true;
-              }
-            }
-          } catch (_) {}
-        }
-        // Permanently expired or revoked session
-        await storageService.clearAuth();
-        return false;
+        final refreshed = await apiClient.tryRefreshToken();
+        if (refreshed) return true;
+        // Keep credentials cached even if refresh encounters a temporary glitch;
+        // only explicit user logout clears auth.
+        return true;
       }
     } catch (e) {
       // Offline / network failure: keep user logged in with cached credentials

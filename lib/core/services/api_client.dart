@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -121,6 +122,8 @@ class ApiClient {
   bool _isRefreshing = false;
   final Map<String, Future<dynamic>> _inFlightGetRequests = {};
 
+  Future<bool> tryRefreshToken() => _tryRefreshToken();
+
   Future<bool> _tryRefreshToken() async {
     final refresh = storageService.refreshToken;
     if (refresh == null || refresh.isEmpty) return false;
@@ -128,30 +131,43 @@ class ApiClient {
 
     _isRefreshing = true;
     try {
-      final uri = _buildUri('/users/auth/token/refresh/');
-      final response = await _client
-          .post(
-            uri,
-            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
-            body: jsonEncode({'refresh': refresh}),
-          )
-          .timeout(AppConstants.connectTimeout);
+      final refreshEndpoints = [
+        '/users/auth/token/refresh/',
+        '/token/refresh/',
+        '/auth/token/refresh/',
+        '/users/token/refresh/',
+      ];
 
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        final dynamic json = jsonDecode(response.body);
-        if (json is Map) {
-          final newAccess = json['access']?.toString() ??
-              json['access_token']?.toString() ??
-              json['token']?.toString();
-          if (newAccess != null && newAccess.isNotEmpty) {
-            await storageService.setAuthToken(newAccess);
-            final newRefresh = json['refresh']?.toString() ?? json['refresh_token']?.toString();
-            if (newRefresh != null && newRefresh.isNotEmpty) {
-              await storageService.setRefreshToken(newRefresh);
+      for (final endpoint in refreshEndpoints) {
+        try {
+          final uri = _buildUri(endpoint);
+          final response = await _client
+              .post(
+                uri,
+                headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+                body: jsonEncode({'refresh': refresh}),
+              )
+              .timeout(const Duration(seconds: 8));
+
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            final dynamic json = jsonDecode(response.body);
+            if (json is Map) {
+              final newAccess = json['access']?.toString() ??
+                  json['access_token']?.toString() ??
+                  json['token']?.toString();
+              if (newAccess != null && newAccess.isNotEmpty) {
+                await storageService.setAuthToken(newAccess);
+                final newRefresh = json['refresh']?.toString() ?? json['refresh_token']?.toString();
+                if (newRefresh != null && newRefresh.isNotEmpty) {
+                  await storageService.setRefreshToken(newRefresh);
+                }
+                debugPrint('🔄 JWT access token successfully refreshed via $endpoint');
+                return true;
+              }
             }
-            debugPrint('🔄 JWT access token successfully refreshed');
-            return true;
           }
+        } catch (_) {
+          continue;
         }
       }
     } catch (e) {
@@ -212,13 +228,9 @@ class ApiClient {
       }
       rethrow;
     } on SocketException catch (e) {
-      throw ApiException(
-        statusCode: 0,
-        message: 'Cannot reach server at $_baseUrl. Check your Wi-Fi network and backend status (${e.message}).',
-      );
+      _handleRequestError(e);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException(statusCode: 500, message: e.toString());
+      _handleRequestError(e);
     }
   }
 
@@ -255,13 +267,9 @@ class ApiClient {
       }
       rethrow;
     } on SocketException catch (e) {
-      throw ApiException(
-        statusCode: 0,
-        message: 'Cannot reach server at $_baseUrl. Check your Wi-Fi network and backend status (${e.message}).',
-      );
+      _handleRequestError(e);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException(statusCode: 500, message: e.toString());
+      _handleRequestError(e);
     }
   }
 
@@ -298,13 +306,9 @@ class ApiClient {
       }
       rethrow;
     } on SocketException catch (e) {
-      throw ApiException(
-        statusCode: 0,
-        message: 'Cannot reach server at $_baseUrl. Check your Wi-Fi network and backend status (${e.message}).',
-      );
+      _handleRequestError(e);
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException(statusCode: 500, message: e.toString());
+      _handleRequestError(e);
     }
   }
 
@@ -332,14 +336,52 @@ class ApiClient {
       }
       rethrow;
     } on SocketException catch (e) {
+      _handleRequestError(e);
+    } catch (e) {
+      _handleRequestError(e);
+    }
+  }
+
+  Never _handleRequestError(dynamic e) {
+    if (e is ApiException) rethrow;
+
+    final errStr = e.toString().toLowerCase();
+
+    if (e is TimeoutException ||
+        errStr.contains('timeout') ||
+        errStr.contains('future not completed') ||
+        errStr.contains('timed out')) {
+      throw const ApiException(
+        statusCode: 408,
+        message:
+            'Connection timed out. The server took too long to respond. Please check your internet connection and try again.',
+      );
+    }
+
+    if (e is SocketException ||
+        errStr.contains('socketexception') ||
+        errStr.contains('failed host lookup') ||
+        errStr.contains('connection refused') ||
+        errStr.contains('network is unreachable')) {
       throw ApiException(
         statusCode: 0,
-        message: 'Cannot reach server at $_baseUrl. Check your Wi-Fi network and backend status (${e.message}).',
+        message:
+            'Cannot reach server at $_baseUrl. Please check your Wi-Fi or data connection and try again.',
       );
-    } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException(statusCode: 500, message: e.toString());
     }
+
+    if (errStr.contains('handshake') || errStr.contains('certificate')) {
+      throw const ApiException(
+        statusCode: 0,
+        message: 'Secure connection error. Please try again.',
+      );
+    }
+
+    throw const ApiException(
+      statusCode: 500,
+      message:
+          'A network error occurred. Please check your connection and try again.',
+    );
   }
 
   dynamic _processResponse(http.Response response) {
