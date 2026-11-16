@@ -12,6 +12,14 @@ import 'package:speakwise_mobile/features/auth/view/widgets/social_pill_button.d
 /// ═══════════════════════════════════════════════════════════════
 /// Screen 1C: Registration Screen ("Sign up")
 /// Connected to Django API: POST /users/auth/register/
+/// Fields:
+/// 1. First Name
+/// 2. Last Name
+/// 3. Username
+/// 4. Nationality
+/// 5. Email
+/// 6. Password
+/// 7. Confirm Password
 /// ═══════════════════════════════════════════════════════════════
 class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
@@ -21,42 +29,132 @@ class SignupScreen extends ConsumerStatefulWidget {
 }
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
-  final _firstNameController = TextEditingController(text: 'Julius');
-  final _lastNameController = TextEditingController(text: 'Boakye');
-  final _nationalityController = TextEditingController(text: 'Ghanaian');
-  final _usernameController = TextEditingController(text: 'juliusb');
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _usernameController = TextEditingController();
+  final _nationalityController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
   bool _isLoading = false;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
-    _nationalityController.dispose();
     _usernameController.dispose();
+    _nationalityController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: AppTheme.font(
+            color: Colors.white,
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: AppTheme.errorRed,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+    );
   }
 
   void _onSignUp() async {
     HapticFeedback.lightImpact();
+    FocusScope.of(context).unfocus();
+
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
-    final nationality = _nationalityController.text.trim();
     final username = _usernameController.text.trim();
-    final email = '${username.isNotEmpty ? username : 'user'}@example.com';
+    final nationality = _nationalityController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    // Client-side validations
+    if (firstName.isEmpty) {
+      _showErrorSnackBar('Please enter your first name.');
+      return;
+    }
+    if (lastName.isEmpty) {
+      _showErrorSnackBar('Please enter your last name.');
+      return;
+    }
+    if (username.isEmpty) {
+      _showErrorSnackBar('Please choose a username.');
+      return;
+    }
+    if (nationality.isEmpty) {
+      _showErrorSnackBar('Please enter your nationality.');
+      return;
+    }
+    if (email.isEmpty ||
+        !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
+      _showErrorSnackBar('Please enter a valid email address.');
+      return;
+    }
+    if (password.isEmpty) {
+      _showErrorSnackBar('Please enter a password.');
+      return;
+    }
+    if (password.length < 8) {
+      _showErrorSnackBar('Password must be at least 8 characters long.');
+      return;
+    }
+    if (password != confirmPassword) {
+      _showErrorSnackBar('Passwords do not match.');
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      await ref.read(authRemoteDataSourceProvider).register(
-            firstName: firstName.isNotEmpty ? firstName : 'Julius',
-            lastName: lastName.isNotEmpty ? lastName : 'Boakye',
-            nationality: nationality.isNotEmpty ? nationality : 'Ghanaian',
-            username: username.isNotEmpty ? username : 'juliusb',
+      final response = await ref
+          .read(authRemoteDataSourceProvider)
+          .register(
+            firstName: firstName,
+            lastName: lastName,
+            nationality: nationality,
+            username: username,
             email: email,
-            password: 'Password123!',
+            password: password,
           );
+
       if (mounted) {
-        context.go('/auth/verify-otp?email=$email');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              response.message.isNotEmpty
+                  ? response.message
+                  : 'Verification code sent to $email.',
+              style: AppTheme.font(
+                color: Colors.black,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: AppTheme.primaryAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        );
+        context.go('/auth/verify-otp?email=${Uri.encodeComponent(email)}');
       }
     } catch (e) {
       debugPrint('Registration error: $e');
@@ -64,17 +162,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         final message = e is ApiException
             ? e.message
             : 'Registration failed. Please check your details or server connection.';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              message,
-              style: AppTheme.font(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600),
-            ),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        );
+        _showErrorSnackBar(message);
       }
     } finally {
       if (mounted) {
@@ -93,11 +181,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         radius: 0.95,
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 30),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 36),
+                const SizedBox(height: 20),
 
                 // 1. Headline: "Let's create your Account"
                 Text(
@@ -105,43 +193,114 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   textAlign: TextAlign.center,
                   style: AppTheme.font(
                     color: AppTheme.textPrimary,
-                    fontSize: 35,
+                    fontSize: 34,
                     fontWeight: FontWeight.w500,
                     letterSpacing: -0.6,
                     height: 1.16,
                   ),
                 ),
 
-                const SizedBox(height: 36),
+                const SizedBox(height: 28),
 
-                // 2. Form Inputs (4 Light Gray Stadium Pills)
+                // 2. Form Inputs (Stadium Pills matching Backend API fields)
+                // First Name
                 AuthTextField(
                   controller: _firstNameController,
                   hintText: 'First Name',
+                  enabled: !_isLoading,
+                  readOnly: _isLoading,
                 ),
 
                 const SizedBox(height: 14),
 
+                // Last Name
                 AuthTextField(
                   controller: _lastNameController,
                   hintText: 'Last Name',
+                  enabled: !_isLoading,
+                  readOnly: _isLoading,
                 ),
 
                 const SizedBox(height: 14),
 
+                // Username
+                AuthTextField(
+                  controller: _usernameController,
+                  hintText: 'Username',
+                  enabled: !_isLoading,
+                  readOnly: _isLoading,
+                ),
+
+                const SizedBox(height: 14),
+
+                // Nationality
                 AuthTextField(
                   controller: _nationalityController,
                   hintText: 'Nationality',
+                  enabled: !_isLoading,
+                  readOnly: _isLoading,
                 ),
 
                 const SizedBox(height: 14),
 
+                // Email
                 AuthTextField(
-                  controller: _usernameController,
-                  hintText: 'username',
+                  controller: _emailController,
+                  hintText: 'Email',
+                  keyboardType: TextInputType.emailAddress,
+                  enabled: !_isLoading,
+                  readOnly: _isLoading,
                 ),
 
-                const SizedBox(height: 28),
+                const SizedBox(height: 14),
+
+                // Password
+                AuthTextField(
+                  controller: _passwordController,
+                  hintText: 'Password',
+                  obscureText: _obscurePassword,
+                  enabled: !_isLoading,
+                  readOnly: _isLoading,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: const Color(0xFF6E6E6E),
+                      size: 20,
+                    ),
+                    onPressed: _isLoading
+                        ? null
+                        : () => setState(
+                            () => _obscurePassword = !_obscurePassword),
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                // Confirm Password
+                AuthTextField(
+                  controller: _confirmPasswordController,
+                  hintText: 'Confirm Password',
+                  obscureText: _obscureConfirmPassword,
+                  enabled: !_isLoading,
+                  readOnly: _isLoading,
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscureConfirmPassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: const Color(0xFF6E6E6E),
+                      size: 20,
+                    ),
+                    onPressed: _isLoading
+                        ? null
+                        : () => setState(() => _obscureConfirmPassword =
+                            !_obscureConfirmPassword),
+                  ),
+                ),
+
+                const SizedBox(height: 26),
 
                 // 3. Primary Neon Lime CTA Button
                 SizedBox(
@@ -206,7 +365,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 26),
+                const SizedBox(height: 24),
 
                 // 5. Divider: "— or continue with —"
                 Row(
@@ -237,7 +396,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ],
                 ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 18),
 
                 // 6. Social Buttons (Light Gray Stadium Pills)
                 Row(
@@ -252,16 +411,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     ),
                     const SizedBox(width: 14),
                     SocialPillButton(
-                      icon: const GithubLogo(
-                        size: 22,
-                        color: Colors.black,
-                      ),
+                      icon: const GithubLogo(size: 22, color: Colors.black),
                       onTap: () => context.go('/shell'),
                     ),
                   ],
                 ),
 
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
               ],
             ),
           ),

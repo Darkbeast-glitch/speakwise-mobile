@@ -183,7 +183,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // 3. Email Input (Light Gray Pill)
                 AuthTextField(
                   controller: _emailController,
-                  hintText: 'bbjulius900@gmail.com',
+                  hintText: 'Enter your email here',
                   keyboardType: TextInputType.emailAddress,
                   enabled: !_isLoading,
                   readOnly: _isLoading,
@@ -194,7 +194,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // 4. Password Input (Light Gray Pill)
                 AuthTextField(
                   controller: _passwordController,
-                  hintText: 'password.',
+                  hintText: 'Enter your password.',
                   obscureText: _obscurePassword,
                   enabled: !_isLoading,
                   readOnly: _isLoading,
