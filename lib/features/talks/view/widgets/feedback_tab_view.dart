@@ -442,9 +442,8 @@ class _FeedbackTabViewState extends ConsumerState<FeedbackTabView> {
               ),
             ],
           ),
-        ),
 
-        const SizedBox(height: 12),
+          const SizedBox(height: 12),
 
         // Feedback Review Cards List
         if (talksState.status == TalksStatus.loading && reviews.isEmpty)

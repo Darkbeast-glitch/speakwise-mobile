@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/core/config/app_constants.dart';
+import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/core/utils/event_logo_resolver.dart';
 import 'package:speakwise_mobile/core/widgets/app_shimmer.dart';
 import 'package:speakwise_mobile/core/widgets/user_avatar.dart';
@@ -218,8 +219,36 @@ class _SpeakerProfileDetailsScreenState
             ),
           ),
           data: (profile) {
+            final storage = ref.watch(storageServiceProvider);
+            final currentUsername = storage.username?.trim().toLowerCase();
+            final currentUserId = storage.userId?.trim();
+            final currentSpeakerId = storage.speakerId?.trim();
+            final currentSpeakerSlug = storage.speakerSlug?.trim().toLowerCase();
+
+            final targetUsername = profile.username.trim().toLowerCase();
+            final targetUserId = profile.id.trim();
+            final targetSlug = profile.slug.trim().toLowerCase();
+            final targetIdParam = widget.speakerId.trim().toLowerCase();
+
+            final isSelf = (currentUsername != null &&
+                    currentUsername.isNotEmpty &&
+                    currentUsername == targetUsername) ||
+                (currentUserId != null &&
+                    currentUserId.isNotEmpty &&
+                    currentUserId == targetUserId) ||
+                (currentSpeakerId != null &&
+                    currentSpeakerId.isNotEmpty &&
+                    currentSpeakerId == targetUserId) ||
+                (currentSpeakerSlug != null &&
+                    currentSpeakerSlug.isNotEmpty &&
+                    (currentSpeakerSlug == targetSlug ||
+                        currentSpeakerSlug == targetIdParam)) ||
+                (targetIdParam == currentUsername ||
+                    targetIdParam == currentUserId);
+
             if (!_hasSyncedFollowing) {
-              _isFollowing = profile.isFollowing;
+              _isFollowing = profile.isFollowing ||
+                  storage.isSpeakerFollowed(widget.speakerId);
               _hasSyncedFollowing = true;
             }
             final displayName = profile.fullName.isNotEmpty
@@ -367,76 +396,147 @@ class _SpeakerProfileDetailsScreenState
                                     right: 18,
                                     child: GestureDetector(
                                       onTap: () async {
+                                        if (isSelf) {
+                                          HapticFeedback.heavyImpact();
+                                          ScaffoldMessenger.of(context)
+                                              .hideCurrentSnackBar();
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.info_outline_rounded,
+                                                    color: Colors.white,
+                                                    size: 18,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Expanded(
+                                                    child: Text(
+                                                      'You cannot follow your own profile.',
+                                                      style: AppTheme.font(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              backgroundColor:
+                                                  const Color(0xFF1E2024),
+                                              duration:
+                                                  const Duration(seconds: 2),
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                          );
+                                          return;
+                                        }
+
                                         HapticFeedback.lightImpact();
                                         final previous = _isFollowing;
-                                        setState(
-                                          () => _isFollowing = !previous,
-                                        );
+                                        final newStatus = !previous;
+                                        setState(() => _isFollowing = newStatus);
+
+                                        // Persist follow state locally
+                                        await storage.toggleSpeakerFollow(
+                                            widget.speakerId);
+
+                                        // Inform backend
                                         try {
-                                          final newStatus = await ref
+                                          await ref
                                               .read(profileRepositoryProvider)
-                                              .toggleFollowSpeaker(widget.speakerId);
-                                          if (mounted) {
-                                            setState(() => _isFollowing = newStatus);
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  newStatus
-                                                      ? 'Following $displayName'
-                                                      : 'Unfollowed $displayName',
-                                                  style: AppTheme.font(
-                                                    color: Colors.white,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                backgroundColor: const Color(0xFF1B1D1F),
-                                                duration: const Duration(seconds: 2),
-                                                behavior: SnackBarBehavior.floating,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                              ),
-                                            );
-                                          }
+                                              .toggleFollowSpeaker(
+                                                  widget.speakerId);
                                         } catch (e) {
-                                          if (mounted) {
-                                            setState(() => _isFollowing = previous);
-                                            ScaffoldMessenger.of(context).showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                  'Failed to update follow status: $e',
-                                                  style: AppTheme.font(color: Colors.white),
-                                                ),
-                                                backgroundColor: AppTheme.errorRed,
-                                                behavior: SnackBarBehavior.floating,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
+                                          debugPrint('Follow speaker notice: $e');
+                                        }
+
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .hideCurrentSnackBar();
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Row(
+                                                children: [
+                                                  Icon(
+                                                    newStatus
+                                                        ? Icons
+                                                            .check_circle_rounded
+                                                        : Icons
+                                                            .remove_circle_outline_rounded,
+                                                    color: newStatus
+                                                        ? AppTheme.primaryAccent
+                                                        : const Color(0xFFFF5252),
+                                                    size: 18,
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Expanded(
+                                                    child: Text(
+                                                      newStatus
+                                                          ? 'Following $displayName'
+                                                          : 'Unfollowed $displayName',
+                                                      style: AppTheme.font(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 13,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
-                                            );
-                                          }
+                                              backgroundColor:
+                                                  const Color(0xFF1B1D1F),
+                                              duration:
+                                                  const Duration(seconds: 2),
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                            ),
+                                          );
                                         }
                                       },
-                                      child: Container(
+                                      child: AnimatedContainer(
+                                        duration:
+                                            const Duration(milliseconds: 220),
                                         width: 38,
                                         height: 38,
                                         decoration: BoxDecoration(
-                                          color: AppTheme.primaryAccent,
+                                          color: _isFollowing
+                                              ? const Color(0xFFE53935) // Red when following (Unfollow)
+                                              : AppTheme.primaryAccent, // Neon Lime when not following (+)
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: AppTheme.primaryAccent
-                                                  .withValues(alpha: 0.3),
+                                              color: (_isFollowing
+                                                      ? const Color(0xFFE53935)
+                                                      : AppTheme.primaryAccent)
+                                                  .withValues(alpha: 0.35),
                                               blurRadius: 10,
                                             ),
                                           ],
                                         ),
-                                        child: Icon(
-                                          _isFollowing
-                                              ? Icons.check_rounded
-                                              : Icons.person_add_alt_1_rounded,
-                                          color: Colors.black,
-                                          size: 19,
+                                        child: Center(
+                                          child: Icon(
+                                            _isFollowing
+                                                ? Icons.remove_rounded // Red with -
+                                                : Icons.add_rounded, // Neon Lime with +
+                                            color: _isFollowing
+                                                ? Colors.white
+                                                : Colors.black,
+                                            size: 22,
+                                          ),
                                         ),
                                       ),
                                     ),
@@ -790,7 +890,7 @@ class _SpeakerProfileDetailsScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Row Header: Events Spoken + See all
+          // Row Header: Events Spoken
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -803,20 +903,23 @@ class _SpeakerProfileDetailsScreenState
                   letterSpacing: -0.2,
                 ),
               ),
-              GestureDetector(
-                onTap: () {
-                  HapticFeedback.lightImpact();
-                  context.push('/events/all');
-                },
-                child: Text(
-                  'See all',
-                  style: AppTheme.font(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
+              if (events.isNotEmpty)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                  ),
+                  child: Text(
+                    '${events.length} ${events.length == 1 ? 'event' : 'events'}',
+                    style: AppTheme.font(
+                      color: AppTheme.textMuted,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
 
@@ -838,59 +941,48 @@ class _SpeakerProfileDetailsScreenState
                 children: events.map((event) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 16),
-                    child: GestureDetector(
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        if (event.eventId != null &&
-                            event.eventId!.isNotEmpty) {
-                          context.push('/event/${event.eventId}');
-                        } else {
-                          context.push('/events/all');
-                        }
-                      },
-                      child: Column(
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: const Color(0xFF1B1E16),
-                              border: Border.all(
-                                color: AppTheme.primaryAccent.withValues(
-                                  alpha: 0.35,
-                                ),
-                                width: 1.5,
+                    child: Column(
+                      children: [
+                        Container(
+                          width: 52,
+                          height: 52,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF1B1E16),
+                            border: Border.all(
+                              color: AppTheme.primaryAccent.withValues(
+                                alpha: 0.35,
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.4),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
+                              width: 1.5,
                             ),
-                            child: ClipOval(
-                              child: _buildEventImage(event.image, event.name),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: _buildEventImage(event.image, event.name),
+                          ),
+                        ),
+                        const SizedBox(height: 7),
+                        SizedBox(
+                          width: 68,
+                          child: Text(
+                            event.name,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTheme.font(
+                              color: Colors.white.withValues(alpha: 0.75),
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const SizedBox(height: 7),
-                          SizedBox(
-                            width: 68,
-                            child: Text(
-                              event.name,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTheme.font(
-                                color: Colors.white.withValues(alpha: 0.75),
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   );
                 }).toList(),

@@ -114,7 +114,10 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
                 ExploreHeader(
                   userName: userName,
                   avatarPath: userAvatar,
-                  onNotificationTap: () {},
+                  onNotificationTap: () {
+                    HapticFeedback.mediumImpact();
+                    NotificationsSheet.show(context);
+                  },
                   onAvatarTap: () {
                     HapticFeedback.lightImpact();
                     context.push('/shell?tab=3');

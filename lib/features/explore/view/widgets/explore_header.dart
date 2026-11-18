@@ -87,12 +87,28 @@ class ExploreHeader extends StatelessWidget {
                   width: 1,
                 ),
               ),
-              child: Center(
-                child: Icon(
-                  Icons.notifications_none_rounded,
-                  color: AppTheme.primaryAccent,
-                  size: 22,
-                ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  const Icon(
+                    Icons.notifications_none_rounded,
+                    color: AppTheme.primaryAccent,
+                    size: 22,
+                  ),
+                  Positioned(
+                    top: 10,
+                    right: 11,
+                    child: Container(
+                      width: 7,
+                      height: 7,
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryAccent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: const Color(0xFF161616), width: 1.2),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

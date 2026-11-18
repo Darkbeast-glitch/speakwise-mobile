@@ -88,6 +88,44 @@ class StorageService {
     await _prefs.setBool(AppConstants.keyIsGuest, value);
   }
 
+  Set<String> get bookmarkedEventIds =>
+      (_prefs.getStringList(AppConstants.keyBookmarkedEvents) ?? []).toSet();
+
+  bool isEventBookmarked(String eventId) =>
+      bookmarkedEventIds.contains(eventId);
+
+  Future<bool> toggleEventBookmark(String eventId) async {
+    final current = bookmarkedEventIds;
+    final isNowBookmarked = !current.contains(eventId);
+    if (isNowBookmarked) {
+      current.add(eventId);
+    } else {
+      current.remove(eventId);
+    }
+    await _prefs.setStringList(
+        AppConstants.keyBookmarkedEvents, current.toList());
+    return isNowBookmarked;
+  }
+
+  Set<String> get followedSpeakerIds =>
+      (_prefs.getStringList(AppConstants.keyFollowedSpeakers) ?? []).toSet();
+
+  bool isSpeakerFollowed(String speakerId) =>
+      followedSpeakerIds.contains(speakerId);
+
+  Future<bool> toggleSpeakerFollow(String speakerId) async {
+    final current = followedSpeakerIds;
+    final isNowFollowed = !current.contains(speakerId);
+    if (isNowFollowed) {
+      current.add(speakerId);
+    } else {
+      current.remove(speakerId);
+    }
+    await _prefs.setStringList(
+        AppConstants.keyFollowedSpeakers, current.toList());
+    return isNowFollowed;
+  }
+
   Future<void> clearAuth() async {
     await _prefs.remove(AppConstants.keyAuthToken);
     await _prefs.remove(AppConstants.keyRefreshToken);

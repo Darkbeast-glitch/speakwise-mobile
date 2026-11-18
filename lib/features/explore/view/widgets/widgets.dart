@@ -5,5 +5,6 @@ export 'featured_event_card.dart';
 export 'featured_speakers_section.dart';
 export 'happening_this_month_list.dart';
 export 'more_upcoming_events_section.dart';
+export 'notifications_sheet.dart';
 export 'search_filter_bar.dart';
 export 'trending_sessions_section.dart';

@@ -112,7 +112,7 @@ class EventsData {
       endDateTime: DateTime(2027, 5, 24),
       imagePath: 'assets/images/pycon_ghana.jpg',
       isTicketed: true,
-      ticketPrice: '\$25',
+      ticketPrice: '',
       bannerSubtitle: "West Africa's largest Python, Cloud & Data Gathering. Add this to your calendar.",
       description:
           "PyCon Ghana 2027 brings together over 1,200 developers, students, researchers, and tech founders to Accra. Explore emerging patterns in AI, Cloud infrastructure, and decentralization across 3 specialized tracks.",
@@ -150,7 +150,7 @@ class EventsData {
       endDateTime: DateTime(2027, 3, 31),
       imagePath: 'assets/images/pycon_namibia.jpg',
       isTicketed: true,
-      ticketPrice: '\$30',
+      ticketPrice: '',
       bannerSubtitle: 'Planning your next PyCon event in 2027? Add this to your calendar',
       description:
           "Join the vibrant Python community in Namibia for 3 days of talks, hands-on workshops, keynotes from world-class engineers, and networking sessions. Whether you're building Web3 backends, AI applications, or distributed systems, PyCon Namibia brings together developers, open-source contributors, and industry leaders from across Africa and beyond.",
@@ -188,7 +188,7 @@ class EventsData {
       endDateTime: DateTime(2027, 3, 21),
       imagePath: 'assets/images/pycon_angola.jpg',
       isTicketed: true,
-      ticketPrice: '\$15',
+      ticketPrice: '',
       bannerSubtitle: 'Connecting Portuguese-speaking developers across Southern Africa.',
       description:
           "The premier software conference in Luanda uniting open-source builders, fintech founders, and engineers to collaborate on resilient backend systems and digital infrastructure.",
@@ -205,7 +205,7 @@ class EventsData {
       endDateTime: DateTime(2026, 11, 17),
       imagePath: 'assets/images/cortex_summit.jpg',
       isTicketed: true,
-      ticketPrice: 'Free',
+      ticketPrice: '',
       bannerSubtitle: 'Architecting Scalable Systems & Next-Gen Mobile Infrastructure.',
       description:
           "West Africa's flagship engineering conference focusing on high-throughput backend architecture, mobile apps in Flutter, and non-custodial Stellar smart contracts.",
@@ -223,7 +223,7 @@ class EventsData {
       startDateTime: DateTime(2026, 11, 14, 8),
       imagePath: 'assets/images/cortex_summit.jpg',
       isTicketed: true,
-      ticketPrice: '\$15',
+      ticketPrice: '',
       bannerSubtitle: 'Creative visual storytelling & modern digital post-production.',
       description:
           'Hands-on masterclass covering real-time non-linear editing, high-framerate motion graphics, and audio synthesis for creators.',
@@ -241,7 +241,7 @@ class EventsData {
       startDateTime: DateTime(2026, 11, 16, 10),
       imagePath: 'assets/images/google_io_accra.jpg',
       isTicketed: true,
-      ticketPrice: '\$20',
+      ticketPrice: '',
       bannerSubtitle: 'Color theory, digital brushwork and anatomy fundamentals.',
       description:
           'An intensive workshop designed for conceptual artists and UI designers looking to master visual rendering and lighting.',
@@ -259,7 +259,7 @@ class EventsData {
       startDateTime: DateTime(2026, 11, 22, 14),
       imagePath: 'assets/images/pycon_namibia.jpg',
       isTicketed: true,
-      ticketPrice: '\$50',
+      ticketPrice: '',
       bannerSubtitle: 'Premier independent cinema and creative technology.',
       description:
           'World premiere screenings, director panels, and interactive technology demonstrations bridging cinema and generative digital media.',

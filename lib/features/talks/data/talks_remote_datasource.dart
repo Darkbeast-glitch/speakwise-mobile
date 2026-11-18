@@ -536,6 +536,8 @@ class DjangoTalksRemoteDataSource implements TalksRemoteDataSource {
         'comments': comments,
       },
     );
+  }
+
   @override
   Future<void> deleteSpeakerExperience(String talkId) async {
     final slugOrId = await resolveSpeakerSlugOrId();

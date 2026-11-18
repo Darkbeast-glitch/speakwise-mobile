@@ -224,6 +224,7 @@ class UserProfile {
   });
 
   String get fullName => '$firstName $lastName'.trim();
+  String get speakerSlug => slug;
 
   UserProfile copyWith({
     String? id,

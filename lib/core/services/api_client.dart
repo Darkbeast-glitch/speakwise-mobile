@@ -91,6 +91,10 @@ class ApiClient {
     final headers = <String, String>{
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      'X-Client-Platform': 'mobile-app',
+      'X-App-Name': 'speakwise-mobile',
+      'X-Platform': !kIsWeb && Platform.isIOS ? 'ios' : 'android',
+      'User-Agent': 'SpeakWise-Mobile/1.0.0 (${!kIsWeb && Platform.isIOS ? 'iOS' : 'Android'})',
     };
 
     if (authenticated) {
@@ -343,7 +347,7 @@ class ApiClient {
   }
 
   Never _handleRequestError(dynamic e) {
-    if (e is ApiException) rethrow;
+    if (e is ApiException) throw e;
 
     final errStr = e.toString().toLowerCase();
 

@@ -52,7 +52,7 @@ class EventItem {
         "Join the vibrant community for an immersive gathering of engineers, innovators, and leaders. Experience hands-on technical sessions, keynote presentations from world-class architects, and network with creators from across Africa and beyond.",
     this.bannerSubtitle = "Planning your next tech event? Add this to your calendar.",
     this.categoryId = 'africa',
-    this.ticketPrice = '\$20',
+    this.ticketPrice = '',
     this.speakers = const [],
     this.time = '08:00 AM',
     this.attendeeCount = '3k+',

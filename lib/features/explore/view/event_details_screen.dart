@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
+import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/core/widgets/widgets.dart';
 import 'package:speakwise_mobile/features/explore/explore.dart';
 
@@ -34,6 +36,8 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
   void initState() {
     super.initState();
     _event = widget.initialEvent;
+    final storage = ref.read(storageServiceProvider);
+    _isBookmarked = storage.isEventBookmarked(widget.eventId);
     _loadEventDetails();
   }
 
@@ -261,8 +265,22 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
 
                   // Share Button
                   GestureDetector(
-                    onTap: () {
+                    onTap: () async {
                       HapticFeedback.lightImpact();
+                      final box = context.findRenderObject() as RenderBox?;
+                      final originRect = box != null
+                          ? box.localToGlobal(Offset.zero) & box.size
+                          : const Rect.fromLTWH(0, 0, 100, 100);
+
+                      final shareUrl = event.website != null && event.website!.trim().isNotEmpty
+                          ? event.website!
+                          : 'https://speakwise.live/event/${event.slug ?? event.id}';
+
+                      await Share.share(
+                        'Check out ${event.title} happening on ${event.date} at ${event.location}!\n$shareUrl',
+                        subject: event.title,
+                        sharePositionOrigin: originRect,
+                      );
                     },
                     child: Container(
                       width: 40,
@@ -833,18 +851,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                                                 ),
                                               ),
                                             ),
-                                            Text(
-                                              isOtherFree
-                                                  ? 'Free'
-                                                  : otherEvent.ticketPrice,
-                                              style: AppTheme.font(
-                                                color: isOtherFree
-                                                    ? AppTheme.primaryAccent
-                                                    : Colors.white,
-                                                fontSize: 11.5,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
+
                                           ],
                                         ),
                                       ],
@@ -943,19 +950,66 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
 
                   // Circular Heart / Bookmark Button
                   GestureDetector(
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      setState(() => _isBookmarked = !_isBookmarked);
+                    onTap: () async {
+                      HapticFeedback.mediumImpact();
+                      final storage = ref.read(storageServiceProvider);
+                      final isNowBookmarked =
+                          await storage.toggleEventBookmark(event.id);
+                      if (mounted) {
+                        setState(() => _isBookmarked = isNowBookmarked);
+                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Row(
+                              children: [
+                                Icon(
+                                  isNowBookmarked
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  color: isNowBookmarked
+                                      ? const Color(0xFFFF3366)
+                                      : Colors.white,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    isNowBookmarked
+                                        ? 'Saved to your bookmarked events'
+                                        : 'Removed from bookmarks',
+                                    style: AppTheme.font(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            backgroundColor: const Color(0xFF1E2024),
+                            behavior: SnackBarBehavior.floating,
+                            duration: const Duration(seconds: 2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        );
+                      }
                     },
-                    child: Container(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF181818),
+                        color: _isBookmarked
+                            ? const Color(0xFFFF3366).withValues(alpha: 0.15)
+                            : const Color(0xFF181818),
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.15),
-                          width: 1,
+                          color: _isBookmarked
+                              ? const Color(0xFFFF3366).withValues(alpha: 0.6)
+                              : Colors.white.withValues(alpha: 0.15),
+                          width: 1.2,
                         ),
                       ),
                       child: Center(
@@ -964,9 +1018,9 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                               ? Icons.favorite_rounded
                               : Icons.favorite_border_rounded,
                           color: _isBookmarked
-                              ? AppTheme.primaryAccent
+                              ? const Color(0xFFFF3366)
                               : Colors.white,
-                          size: 20,
+                          size: 21,
                         ),
                       ),
                     ),
