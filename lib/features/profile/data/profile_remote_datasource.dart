@@ -221,7 +221,16 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
     final overallAvg = (feedbackSummary['overall_rating'] as Map<String, dynamic>?)?['average'];
     final avgRating = overallAvg is num ? overallAvg.toDouble() : 0.0;
     final totalFeedback = feedbackSummary['total_count'] is int ? feedbackSummary['total_count'] as int : 0;
-    final followers = json['followers_count'] is int ? json['followers_count'] as int : 0;
+    final followers = json['followers_count'] is num
+        ? (json['followers_count'] as num).toInt()
+        : (json['followers'] is num
+            ? (json['followers'] as num).toInt()
+            : (json['followers'] is List ? (json['followers'] as List).length : 0));
+    final following = json['following_count'] is num
+        ? (json['following_count'] as num).toInt()
+        : (json['following'] is num
+            ? (json['following'] as num).toInt()
+            : (json['following'] is List ? (json['following'] as List).length : 0));
 
     final totalTalksCount = json['total_talks'] is num
         ? (json['total_talks'] as num).toInt()
@@ -268,6 +277,8 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
       isFollowing: json['is_following'] == true ||
           json['is_followed'] == true ||
           json['following'] == true,
+      followersCount: followers,
+      followingCount: following,
     );
   }
 

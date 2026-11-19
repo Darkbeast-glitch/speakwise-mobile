@@ -126,6 +126,7 @@ class DjangoEventsRemoteDataSource implements EventsRemoteDataSource {
     final isFree = json['is_free'] == true;
     final isFeatured = json['is_featured'] == true;
     final cfpOpen = json['cfp_open'] == true || json['is_cfp_currently_open'] == true;
+    final cfpLink = json['cfp_link']?.toString() ?? json['cfp_url']?.toString();
     final description = json['description']?.toString() ?? '';
     final website = json['website']?.toString();
 
@@ -271,6 +272,7 @@ class DjangoEventsRemoteDataSource implements EventsRemoteDataSource {
       isFree: isFree,
       isFeatured: isFeatured,
       cfpOpen: cfpOpen,
+      cfpLink: cfpLink,
       startDateTime: startDt,
       endDateTime: endDt,
       website: website,

@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
+import 'package:speakwise_mobile/core/services/api_client.dart';
+import 'package:speakwise_mobile/core/services/storage_service.dart';
+import 'package:speakwise_mobile/core/widgets/app_shimmer.dart';
+import 'package:speakwise_mobile/features/explore/data/events_repository.dart';
 
 /// ═══════════════════════════════════════════════════════════════
 /// Notifications Bottom Sheet
-/// Interactive notifications stream for events, CFP, and speaker updates
+/// Real notifications stream for user alerts, live events, and CFP announcements
 /// ═══════════════════════════════════════════════════════════════
-class NotificationsSheet extends StatefulWidget {
+class NotificationsSheet extends ConsumerStatefulWidget {
   const NotificationsSheet({super.key});
 
   static Future<void> show(BuildContext context) {
@@ -20,7 +26,7 @@ class NotificationsSheet extends StatefulWidget {
   }
 
   @override
-  State<NotificationsSheet> createState() => _NotificationsSheetState();
+  ConsumerState<NotificationsSheet> createState() => _NotificationsSheetState();
 }
 
 class _NotificationItem {
@@ -32,6 +38,7 @@ class _NotificationItem {
   final Color iconColor;
   final String type;
   final String? route;
+  final bool isBackend;
   bool isRead;
 
   _NotificationItem({
@@ -43,74 +50,201 @@ class _NotificationItem {
     required this.iconColor,
     required this.type,
     this.route,
+    this.isBackend = false,
     this.isRead = false,
   });
 }
 
-class _NotificationsSheetState extends State<NotificationsSheet> {
+class _NotificationsSheetState extends ConsumerState<NotificationsSheet> {
   String _selectedFilter = 'all';
-
-  late List<_NotificationItem> _notifications;
+  bool _isLoading = true;
+  List<_NotificationItem> _notifications = [];
 
   @override
   void initState() {
     super.initState();
-    _notifications = [
-      _NotificationItem(
-        id: 'notif-1',
-        title: 'CFP Open • PyCon Ghana 2027',
-        body: 'Call for Proposals is now open! Submit your talk on AI, Cloud, or Distributed Systems before slots fill up.',
-        timeAgo: '15m ago',
-        icon: Icons.mic_external_on_rounded,
-        iconColor: AppTheme.primaryAccent,
-        type: 'cfp',
-        route: '/event/pycon-gh-2027',
-        isRead: false,
-      ),
-      _NotificationItem(
-        id: 'notif-2',
-        title: 'New Feedback Ratings Collected',
-        body: 'Attendees scanned your QR code and submitted 142 ratings for your recent presentation at DevFest Accra.',
-        timeAgo: '2h ago',
-        icon: Icons.qr_code_2_rounded,
-        iconColor: const Color(0xFF00E5FF),
-        type: 'talks',
-        route: '/shell?tab=1',
-        isRead: false,
-      ),
-      _NotificationItem(
-        id: 'notif-3',
-        title: 'Featured Speaker Spotlight',
-        body: 'Juliana Lawson and Ezra Yendau were announced as Keynote Speakers for PyCon Namibia 2027.',
-        timeAgo: '1d ago',
-        icon: Icons.person_add_rounded,
-        iconColor: const Color(0xFFFFD600),
-        type: 'speakers',
-        isRead: true,
-      ),
-      _NotificationItem(
-        id: 'notif-4',
-        title: 'Cortex Dev Summit 2026',
-        body: 'Registration is live! Early access to technical deep dives and Flutter masterclasses in Accra.',
-        timeAgo: '2d ago',
-        icon: Icons.event_available_rounded,
-        iconColor: const Color(0xFF00E676),
-        type: 'events',
-        route: '/event/cortex-summit-2026',
-        isRead: true,
-      ),
-    ];
+    _loadNotifications();
+  }
+
+  String _formatTimeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    if (diff.inDays < 30) return '${(diff.inDays / 7).floor()}w ago';
+    return '${dt.day}/${dt.month}/${dt.year}';
+  }
+
+  _NotificationItem _fromBackendJson(Map<String, dynamic> json) {
+    final id = json['id']?.toString() ?? UniqueKey().toString();
+    final message = json['message']?.toString() ?? 'New notification';
+    final link = json['link']?.toString();
+    final isRead = json['is_read'] == true;
+    final createdAtStr = json['created_at']?.toString();
+
+    String timeAgo = 'Just now';
+    if (createdAtStr != null) {
+      final dt = DateTime.tryParse(createdAtStr);
+      if (dt != null) {
+        timeAgo = _formatTimeAgo(dt);
+      }
+    }
+
+    String title = 'Notification';
+    String type = 'general';
+    IconData icon = Icons.notifications_rounded;
+    Color iconColor = AppTheme.primaryAccent;
+
+    final lower = message.toLowerCase();
+    if (lower.contains('follow')) {
+      title = 'New Follower';
+      type = 'speakers';
+      icon = Icons.person_add_rounded;
+      iconColor = const Color(0xFFFFD600);
+    } else if (lower.contains('cfp') ||
+        lower.contains('proposal') ||
+        lower.contains('paper')) {
+      title = 'CFP Update';
+      type = 'cfp';
+      icon = Icons.mic_external_on_rounded;
+      iconColor = AppTheme.primaryAccent;
+    } else if (lower.contains('feedback') ||
+        lower.contains('rating') ||
+        lower.contains('review')) {
+      title = 'Audience Feedback';
+      type = 'talks';
+      icon = Icons.star_rounded;
+      iconColor = const Color(0xFF00E5FF);
+    } else if (lower.contains('event') || lower.contains('session')) {
+      title = 'Event Update';
+      type = 'events';
+      icon = Icons.event_available_rounded;
+      iconColor = const Color(0xFF00E676);
+    } else if (lower.contains('badge') || lower.contains('achievement')) {
+      title = 'Badge Unlocked';
+      type = 'speakers';
+      icon = Icons.emoji_events_rounded;
+      iconColor = const Color(0xFFFFB300);
+    }
+
+    return _NotificationItem(
+      id: id,
+      title: title,
+      body: message,
+      timeAgo: timeAgo,
+      icon: icon,
+      iconColor: iconColor,
+      type: type,
+      route: link,
+      isBackend: true,
+      isRead: isRead,
+    );
+  }
+
+  Future<void> _loadNotifications() async {
+    final items = <_NotificationItem>[];
+    final storage = ref.read(storageServiceProvider);
+    final isAuthenticated = storage.isAuthenticated;
+
+    // 1. Fetch user notifications from backend if authenticated
+    if (isAuthenticated) {
+      try {
+        final res = await ref
+            .read(apiClientProvider)
+            .get('/notifications/', authenticated: true);
+        List rawList = [];
+        if (res is Map && res['results'] is List) {
+          rawList = res['results'] as List;
+        } else if (res is List) {
+          rawList = res;
+        }
+        for (final raw in rawList) {
+          if (raw is Map) {
+            items.add(_fromBackendJson(Map<String, dynamic>.from(raw)));
+          }
+        }
+      } catch (e) {
+        debugPrint('Could not load user notifications from backend: $e');
+      }
+    }
+
+    // 2. Fetch live events for real CFP and platform updates
+    try {
+      final events = await ref.read(eventsRepositoryProvider).getEvents();
+      // Add real events with CFP open
+      final cfpEvents = events.where((e) => e.cfpOpen).take(3);
+      for (final ev in cfpEvents) {
+        final cfpRoute = (ev.cfpLink != null && ev.cfpLink!.trim().isNotEmpty)
+            ? ev.cfpLink!
+            : '/event/${ev.id}';
+        items.add(
+          _NotificationItem(
+            id: 'cfp-${ev.id}',
+            title: 'CFP Open • ${ev.title}',
+            body:
+                'Call for Proposals is open for ${ev.location}! Tap to submit your talk proposal.',
+            timeAgo: 'Open now',
+            icon: Icons.mic_external_on_rounded,
+            iconColor: AppTheme.primaryAccent,
+            type: 'cfp',
+            route: cfpRoute,
+            isRead: false,
+          ),
+        );
+      }
+
+      // Add upcoming flagship events
+      final upcoming = events.where((e) => !e.cfpOpen).take(2);
+      for (final ev in upcoming) {
+        items.add(
+          _NotificationItem(
+            id: 'event-${ev.id}',
+            title: 'Upcoming • ${ev.title}',
+            body:
+                '${ev.location} • ${ev.date}. Register to attend and connect with top speakers.',
+            timeAgo: ev.dateBadgeMonth != null
+                ? '${ev.dateBadgeMonth} ${ev.dateBadgeDay ?? ""}'.trim()
+                : 'Upcoming',
+            icon: Icons.event_available_rounded,
+            iconColor: const Color(0xFF00E676),
+            type: 'events',
+            route: '/event/${ev.id}',
+            isRead: true,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Could not load live event notifications: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _notifications = items;
+        _isLoading = false;
+      });
+    }
   }
 
   int get _unreadCount => _notifications.where((n) => !n.isRead).length;
 
-  void _markAllAsRead() {
+  void _markAllAsRead() async {
     HapticFeedback.mediumImpact();
     setState(() {
       for (final n in _notifications) {
         n.isRead = true;
       }
     });
+
+    for (final n in _notifications) {
+      if (n.isBackend) {
+        try {
+          await ref
+              .read(apiClientProvider)
+              .post('/notifications/${n.id}/read/', authenticated: true);
+        } catch (_) {}
+      }
+    }
   }
 
   void _clearAll() {
@@ -118,6 +252,33 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
     setState(() {
       _notifications.clear();
     });
+  }
+
+  void _onNotificationTapped(_NotificationItem item) async {
+    HapticFeedback.lightImpact();
+    setState(() => item.isRead = true);
+
+    if (item.isBackend) {
+      try {
+        await ref
+            .read(apiClientProvider)
+            .post('/notifications/${item.id}/read/', authenticated: true);
+      } catch (_) {}
+    }
+
+    if (item.route != null && item.route!.isNotEmpty) {
+      final route = item.route!.trim();
+      if (!mounted) return;
+      Navigator.pop(context);
+      if (route.startsWith('http://') || route.startsWith('https://')) {
+        final uri = Uri.tryParse(route);
+        if (uri != null) {
+          launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      } else {
+        context.push(route);
+      }
+    }
   }
 
   @override
@@ -191,10 +352,15 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
                   if (_unreadCount > 0) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.primaryAccent,
-                        borderRadius: BorderRadius.circular(AppTheme.radiusPill),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.radiusPill,
+                        ),
                       ),
                       child: Text(
                         '$_unreadCount new',
@@ -214,7 +380,10 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
                     GestureDetector(
                       onTap: _markAllAsRead,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 4,
+                        ),
                         child: Text(
                           'Mark read',
                           style: AppTheme.font(
@@ -234,10 +403,16 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
                       decoration: BoxDecoration(
                         color: const Color(0xFF161811),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
                       ),
                       child: const Center(
-                        child: Icon(Icons.close_rounded, color: Colors.white, size: 17),
+                        child: Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                          size: 17,
+                        ),
                       ),
                     ),
                   ),
@@ -268,7 +443,22 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
 
           // Notifications List
           Expanded(
-            child: filtered.isEmpty
+            child: _isLoading
+                ? ListView.separated(
+                    itemCount: 4,
+                    separatorBuilder: (_, _) => const SizedBox(height: 10),
+                    itemBuilder: (_, _) => AppShimmer(
+                      child: Container(
+                        width: double.infinity,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF141416),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  )
+                : filtered.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(vertical: 40),
@@ -315,14 +505,7 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
                     itemBuilder: (context, index) {
                       final item = filtered[index];
                       return GestureDetector(
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          setState(() => item.isRead = true);
-                          if (item.route != null && item.route!.isNotEmpty) {
-                            Navigator.pop(context);
-                            context.push(item.route!);
-                          }
-                        },
+                        onTap: () => _onNotificationTapped(item),
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
@@ -333,7 +516,9 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
                             border: Border.all(
                               color: item.isRead
                                   ? Colors.white.withValues(alpha: 0.06)
-                                  : AppTheme.primaryAccent.withValues(alpha: 0.35),
+                                  : AppTheme.primaryAccent.withValues(
+                                      alpha: 0.35,
+                                    ),
                               width: 1,
                             ),
                           ),
@@ -362,7 +547,8 @@ class _NotificationsSheetState extends State<NotificationsSheet> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
                                           child: Text(

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -49,12 +50,9 @@ class UserAvatar extends StatelessWidget {
     if (avatarUrl == null || avatarUrl!.trim().isEmpty) return false;
     final path = avatarUrl!.trim();
 
-    // Prevent using Julius photo as fallback for other users
+    // Never use Julius.png as avatar image fallback
     if (path.contains('Julius.png')) {
-      final n = (name ?? '').toLowerCase();
-      if (!n.contains('julius')) {
-        return false;
-      }
+      return false;
     }
 
     return true;
@@ -113,6 +111,13 @@ class UserAvatar extends StatelessWidget {
               ),
             );
           },
+        );
+      } else if (File(path).existsSync()) {
+        content = Image.file(
+          File(path),
+          fit: BoxFit.cover,
+          width: size,
+          height: size,
         );
       } else {
         content = Image.asset(

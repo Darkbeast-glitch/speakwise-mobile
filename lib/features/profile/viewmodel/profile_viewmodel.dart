@@ -125,6 +125,7 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
     String? biography,
     Map<String, String>? socialLinks,
     List<String>? skills,
+    String? avatarPath,
   }) async {
     final updated = state.profile.copyWith(
       firstName: firstName,
@@ -138,6 +139,7 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
       biography: biography,
       socialLinks: socialLinks,
       skills: skills,
+      avatarPath: avatarPath,
     );
 
     state = state.copyWith(status: ProfileStatus.loading);

@@ -35,6 +35,7 @@ class EventItem {
   final bool? isFree;
   final bool isFeatured;
   final bool cfpOpen;
+  final String? cfpLink;
   final DateTime? startDateTime;
   final DateTime? endDateTime;
   final String? website;
@@ -62,6 +63,7 @@ class EventItem {
     this.isFree,
     this.isFeatured = false,
     this.cfpOpen = false,
+    this.cfpLink,
     this.startDateTime,
     this.endDateTime,
     this.website,
@@ -108,6 +110,7 @@ class EventItem {
       'isFree': isFree,
       'isFeatured': isFeatured,
       'cfpOpen': cfpOpen,
+      'cfpLink': cfpLink,
       'startDateTime': startDateTime?.toIso8601String(),
       'endDateTime': endDateTime?.toIso8601String(),
       'website': website,
@@ -140,6 +143,9 @@ class EventItem {
       isFree: json['isFree'] as bool?,
       isFeatured: json['isFeatured'] == true,
       cfpOpen: json['cfpOpen'] == true,
+      cfpLink: json['cfpLink']?.toString() ??
+          json['cfp_link']?.toString() ??
+          json['cfp_url']?.toString(),
       startDateTime: json['startDateTime'] != null
           ? DateTime.tryParse(json['startDateTime'].toString())
           : null,

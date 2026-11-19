@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -34,6 +35,7 @@ class _SpeakerProfileDetailsScreenState
   bool _isFavorited = false;
   bool _isFollowing = false;
   bool _hasSyncedFollowing = false;
+  int? _followersCount;
 
   void _onRequestSpeaker(UserProfile profile) {
     HapticFeedback.mediumImpact();
@@ -249,8 +251,10 @@ class _SpeakerProfileDetailsScreenState
             if (!_hasSyncedFollowing) {
               _isFollowing = profile.isFollowing ||
                   storage.isSpeakerFollowed(widget.speakerId);
+              _followersCount = profile.followersCount;
               _hasSyncedFollowing = true;
             }
+            final effectiveFollowersCount = _followersCount ?? profile.followersCount;
             final displayName = profile.fullName.isNotEmpty
                 ? profile.fullName
                 : (profile.firstName.isNotEmpty
@@ -442,7 +446,14 @@ class _SpeakerProfileDetailsScreenState
                                         HapticFeedback.lightImpact();
                                         final previous = _isFollowing;
                                         final newStatus = !previous;
-                                        setState(() => _isFollowing = newStatus);
+                                        setState(() {
+                                          _isFollowing = newStatus;
+                                          if (newStatus) {
+                                            _followersCount = ((_followersCount ?? profile.followersCount) + 1);
+                                          } else {
+                                            _followersCount = math.max(0, (_followersCount ?? profile.followersCount) - 1);
+                                          }
+                                        });
 
                                         // Persist follow state locally
                                         await storage.toggleSpeakerFollow(
@@ -530,12 +541,12 @@ class _SpeakerProfileDetailsScreenState
                                         child: Center(
                                           child: Icon(
                                             _isFollowing
-                                                ? Icons.remove_rounded // Red with -
-                                                : Icons.add_rounded, // Neon Lime with +
+                                                ? Icons.person_remove_rounded // Red with person and -
+                                                : Icons.person_add_rounded, // Neon Lime with person and +
                                             color: _isFollowing
                                                 ? Colors.white
                                                 : Colors.black,
-                                            size: 22,
+                                            size: 20,
                                           ),
                                         ),
                                       ),
@@ -631,6 +642,85 @@ class _SpeakerProfileDetailsScreenState
                                             ),
                                           ),
                                         ],
+                                        const SizedBox(height: 10),
+                                        // Followers & Following Count Pill
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 14,
+                                            vertical: 6,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withValues(
+                                              alpha: 0.45,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(
+                                              AppTheme.radiusPill,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.white.withValues(
+                                                alpha: 0.12,
+                                              ),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                '$effectiveFollowersCount',
+                                                style: AppTheme.font(
+                                                  color: Colors.white,
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                effectiveFollowersCount == 1
+                                                    ? 'Follower'
+                                                    : 'Followers',
+                                                style: AppTheme.font(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.7),
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w400,
+                                                ),
+                                              ),
+                                              Container(
+                                                margin: const EdgeInsets
+                                                    .symmetric(
+                                                  horizontal: 10,
+                                                ),
+                                                width: 3,
+                                                height: 3,
+                                                decoration: BoxDecoration(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.45),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                              Text(
+                                                '${profile.followingCount}',
+                                                style: AppTheme.font(
+                                                  color: Colors.white,
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 4),
+                                              Text(
+                                                'Following',
+                                                style: AppTheme.font(
+                                                  color: Colors.white
+                                                      .withValues(alpha: 0.7),
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w400,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),

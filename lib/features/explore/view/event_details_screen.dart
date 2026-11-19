@@ -61,26 +61,64 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
     }
   }
 
-  void _onSubmitTalk() {
+  Future<void> _onSubmitTalk() async {
     final event = _event;
     if (event == null) return;
     HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: AppTheme.surfaceDark,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusCard),
-          side: const BorderSide(color: AppTheme.surfaceBorder),
+
+    final cfpLink = event.cfpLink?.trim() ?? '';
+    if (cfpLink.isNotEmpty) {
+      String urlString = cfpLink;
+      if (!urlString.startsWith('http://') && !urlString.startsWith('https://')) {
+        urlString = 'https://$urlString';
+      }
+      final uri = Uri.tryParse(urlString);
+      if (uri != null) {
+        try {
+          final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+          if (launched) return;
+        } catch (e) {
+          debugPrint('Error launching CFP link: $e');
+        }
+      }
+    }
+
+    if (event.website != null && event.website!.trim().isNotEmpty) {
+      await _openEventWebsite(event.website!);
+      return;
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.surfaceDark,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusCard),
+            side: const BorderSide(color: AppTheme.surfaceBorder),
+          ),
+          content: Row(
+            children: [
+              const Icon(
+                Icons.info_outline_rounded,
+                color: AppTheme.primaryAccent,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Call for Papers is open for ${event.title}. The organizers have not attached an external submission form yet.',
+                  style: AppTheme.font(
+                    color: AppTheme.textPrimary,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        content: Text(
-          event.cfpOpen
-              ? 'Call for Papers (CFP) is open for ${event.title}!'
-              : 'Call for Papers (CFP) is currently closed for ${event.title}.',
-          style: AppTheme.font(color: AppTheme.textPrimary, fontSize: 13.5),
-        ),
-      ),
-    );
+      );
+    }
   }
 
   Future<void> _openEventWebsite(String rawUrl) async {
@@ -732,8 +770,6 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                         separatorBuilder: (_, _) => const SizedBox(height: 10),
                         itemBuilder: (context, index) {
                           final otherEvent = otherEvents[index];
-                          final isOtherFree =
-                              otherEvent.isFree == true || !otherEvent.isTicketed;
                           return GestureDetector(
                             onTap: () {
                               HapticFeedback.lightImpact();

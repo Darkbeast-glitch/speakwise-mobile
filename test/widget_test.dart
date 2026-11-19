@@ -74,6 +74,9 @@ class _TestAuthRemoteDataSource implements AuthRemoteDataSource {
 
   @override
   Future<void> logout() async {}
+
+  @override
+  Future<bool> validateSession() async => true;
 }
 
 class _TestEventsRepository implements EventsRepository {
@@ -211,6 +214,9 @@ class _TestProfileRepository implements ProfileRepository {
     required String location,
     required String message,
   }) async => true;
+
+  @override
+  Future<bool> toggleFollowSpeaker(String slugOrId) async => true;
 }
 
 void main() {

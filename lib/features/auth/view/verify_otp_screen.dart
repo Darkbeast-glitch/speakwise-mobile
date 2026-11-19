@@ -15,18 +15,17 @@ import 'package:speakwise_mobile/features/auth/data/auth_remote_datasource.dart'
 class VerifyOtpScreen extends ConsumerStatefulWidget {
   final String email;
 
-  const VerifyOtpScreen({
-    super.key,
-    this.email = 'user@example.com',
-  });
+  const VerifyOtpScreen({super.key, this.email = 'user@example.com'});
 
   @override
   ConsumerState<VerifyOtpScreen> createState() => _VerifyOtpScreenState();
 }
 
 class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
-  final List<TextEditingController> _controllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   bool _isVerifying = false;
 
@@ -48,19 +47,49 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
     setState(() => _isVerifying = true);
 
     try {
-      final msg = await ref.read(authRemoteDataSourceProvider).verifyOtp(
-            email: widget.email,
-            otp: otp.isNotEmpty ? otp : '123456',
-          );
+      final msg = await ref
+          .read(authRemoteDataSourceProvider)
+          .verifyOtp(email: widget.email, otp: otp.isNotEmpty ? otp : '123456');
       if (mounted) {
+        final trimmed = msg.trim();
+        final baseMsg = trimmed.endsWith('.') ? trimmed : '$trimmed.';
+        final successMsg = baseMsg.toLowerCase().contains('continue to log in')
+            ? baseMsg
+            : '$baseMsg Continue to log in to your account.';
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(msg, style: AppTheme.font(color: Colors.black, fontWeight: FontWeight.w600)),
+            content: Row(
+              children: [
+                const Icon(
+                  Icons.check_circle_rounded,
+                  color: Colors.black,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    successMsg,
+                    style: AppTheme.font(
+                      color: Colors.black,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
             backgroundColor: AppTheme.primaryAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 4),
           ),
         );
         final storage = ref.read(storageServiceProvider);
         await storage.setHasSeenOnboarding(true);
+        if (!mounted) return;
         if (storage.isAuthenticated) {
           context.go('/shell');
         } else {
@@ -77,11 +106,17 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
           SnackBar(
             content: Text(
               message,
-              style: AppTheme.font(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600),
+              style: AppTheme.font(
+                color: Colors.white,
+                fontSize: 13.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             backgroundColor: AppTheme.errorRed,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -95,7 +130,9 @@ class _VerifyOtpScreenState extends ConsumerState<VerifyOtpScreen> {
   void _onResendOtp() async {
     HapticFeedback.lightImpact();
     try {
-      final msg = await ref.read(authRemoteDataSourceProvider).resendOtp(email: widget.email);
+      final msg = await ref
+          .read(authRemoteDataSourceProvider)
+          .resendOtp(email: widget.email);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

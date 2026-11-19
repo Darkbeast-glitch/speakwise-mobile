@@ -193,6 +193,8 @@ class UserProfile {
   final String? rankTier;
   final int? totalReviews;
   final bool isFollowing;
+  final int followersCount;
+  final int followingCount;
 
   const UserProfile({
     this.id = '',
@@ -221,6 +223,8 @@ class UserProfile {
     this.rankTier,
     this.totalReviews,
     this.isFollowing = false,
+    this.followersCount = 0,
+    this.followingCount = 0,
   });
 
   String get fullName => '$firstName $lastName'.trim();
@@ -253,6 +257,8 @@ class UserProfile {
     String? rankTier,
     int? totalReviews,
     bool? isFollowing,
+    int? followersCount,
+    int? followingCount,
   }) {
     return UserProfile(
       id: id ?? this.id,
@@ -281,6 +287,8 @@ class UserProfile {
       rankTier: rankTier ?? this.rankTier,
       totalReviews: totalReviews ?? this.totalReviews,
       isFollowing: isFollowing ?? this.isFollowing,
+      followersCount: followersCount ?? this.followersCount,
+      followingCount: followingCount ?? this.followingCount,
     );
   }
 
@@ -311,6 +319,8 @@ class UserProfile {
         'rankTier': rankTier,
         'totalReviews': totalReviews,
         'isFollowing': isFollowing,
+        'followersCount': followersCount,
+        'followingCount': followingCount,
       };
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -358,5 +368,11 @@ class UserProfile {
         rankTier: json['rankTier']?.toString(),
         totalReviews: (json['totalReviews'] as num?)?.toInt(),
         isFollowing: json['isFollowing'] == true,
+        followersCount: (json['followersCount'] as num?)?.toInt() ??
+            (json['followers_count'] as num?)?.toInt() ??
+            (json['followers'] is num ? (json['followers'] as num).toInt() : 0),
+        followingCount: (json['followingCount'] as num?)?.toInt() ??
+            (json['following_count'] as num?)?.toInt() ??
+            (json['following'] is num ? (json['following'] as num).toInt() : 0),
       );
 }

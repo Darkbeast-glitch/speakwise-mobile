@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/core/widgets/widgets.dart';
 import 'package:speakwise_mobile/features/profile/profile.dart';
@@ -36,6 +38,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late TextEditingController _newSkillController;
 
   late List<String> _skills;
+  XFile? _selectedImage;
+  bool _removedAvatar = false;
 
   @override
   void initState() {
@@ -121,6 +125,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           biography: _biographyController.text.trim(),
           socialLinks: socialMap,
           skills: _skills,
+          avatarPath: _selectedImage != null
+              ? _selectedImage!.path
+              : (_removedAvatar ? '' : null),
         );
 
     if (mounted) {
@@ -486,7 +493,214 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     );
   }
 
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+      if (picked != null) {
+        setState(() {
+          _selectedImage = picked;
+          _removedAvatar = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not access photo: $e',
+              style: AppTheme.font(color: Colors.white, fontSize: 13),
+            ),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showPhotoPickerOptions(UserProfile profile) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF141416),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        final hasPhoto = _selectedImage != null ||
+            (!_removedAvatar &&
+                profile.avatarPath.trim().isNotEmpty &&
+                !profile.avatarPath.contains('Julius.png'));
+
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Change Profile Photo',
+                  style: AppTheme.font(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E211A),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppTheme.surfaceBorder),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt_rounded,
+                      color: AppTheme.primaryAccent,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'Take Photo',
+                    style: AppTheme.font(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Use your camera to capture a new photo',
+                    style: AppTheme.font(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickImage(ImageSource.camera);
+                  },
+                ),
+                const SizedBox(height: 6),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E211A),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppTheme.surfaceBorder),
+                    ),
+                    child: const Icon(
+                      Icons.photo_library_rounded,
+                      color: AppTheme.primaryAccent,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'Choose from Gallery',
+                    style: AppTheme.font(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'Select an existing picture from your device',
+                    style: AppTheme.font(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickImage(ImageSource.gallery);
+                  },
+                ),
+                if (hasPhoto) ...[
+                  const SizedBox(height: 6),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A1515),
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFE53935).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: Color(0xFFE53935),
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      'Remove Photo',
+                      style: AppTheme.font(
+                        color: const Color(0xFFE53935),
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Revert to initials avatar fallback',
+                      style: AppTheme.font(
+                        color: AppTheme.textMuted,
+                        fontSize: 12,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      setState(() {
+                        _selectedImage = null;
+                        _removedAvatar = true;
+                      });
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildImageCard() {
+    final profile = ref.watch(profileViewModelProvider).profile;
+    final fullName =
+        '${_firstNameController.text} ${_lastNameController.text}'.trim();
+    final effectiveName = fullName.isNotEmpty ? fullName : profile.username;
+    final hasCustomPhoto = _selectedImage != null ||
+        (!_removedAvatar &&
+            profile.avatarPath.trim().isNotEmpty &&
+            !profile.avatarPath.contains('Julius.png'));
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -497,15 +711,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       child: Row(
         children: [
           Container(
+            width: 72,
+            height: 72,
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: AppTheme.primaryAccent, width: 2),
             ),
-            child: const CircleAvatar(
-              radius: 34,
-              backgroundImage: AssetImage('assets/images/Julius.png'),
-            ),
+            child: _selectedImage != null
+                ? ClipOval(
+                    child: Image.file(
+                      File(_selectedImage!.path),
+                      fit: BoxFit.cover,
+                      width: 68,
+                      height: 68,
+                    ),
+                  )
+                : UserAvatar(
+                    name: effectiveName,
+                    avatarUrl: _removedAvatar ? '' : profile.avatarPath,
+                    size: 68,
+                    showBorder: false,
+                  ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -522,23 +749,18 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Current image: avatar.jpg',
+                  _selectedImage != null
+                      ? 'New photo selected'
+                      : (hasCustomPhoto
+                          ? 'Custom photo set'
+                          : 'Using initials fallback'),
                   style: AppTheme.font(color: AppTheme.textMuted, fontSize: 12),
                 ),
                 const SizedBox(height: 10),
                 GestureDetector(
                   onTap: () {
                     HapticFeedback.lightImpact();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Photo picker triggered (Gallery / Camera)',
-                          style: AppTheme.font(color: Colors.white),
-                        ),
-                        backgroundColor: AppTheme.surfaceDark,
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
+                    _showPhotoPickerOptions(profile);
                   },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
