@@ -346,6 +346,87 @@ class ApiClient {
     }
   }
 
+  Future<dynamic> multipartRequest(
+    String path, {
+    String method = 'PATCH',
+    Map<String, String>? fields,
+    Map<String, File>? files,
+    bool authenticated = true,
+    Map<String, String>? headers,
+  }) async {
+    final uri = _buildUri(path);
+    final req = http.MultipartRequest(method, uri);
+
+    final reqHeaders = _buildHeaders(
+      authenticated: authenticated,
+      customHeaders: headers,
+    );
+    reqHeaders.remove('Content-Type'); // Allow http package to generate multipart boundary
+    req.headers.addAll(reqHeaders);
+
+    if (fields != null) {
+      req.fields.addAll(fields);
+    }
+
+    if (files != null) {
+      for (final entry in files.entries) {
+        if (await entry.value.exists()) {
+          req.files.add(
+            await http.MultipartFile.fromPath(
+              entry.key,
+              entry.value.path,
+            ),
+          );
+        }
+      }
+    }
+
+    try {
+      final streamedResponse =
+          await _client.send(req).timeout(AppConstants.connectTimeout);
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 401 &&
+          authenticated &&
+          storageService.refreshToken != null &&
+          storageService.refreshToken!.isNotEmpty) {
+        final refreshed = await _tryRefreshToken();
+        if (refreshed) {
+          final retryReq = http.MultipartRequest(method, uri);
+          final retryHeaders = _buildHeaders(
+            authenticated: authenticated,
+            customHeaders: headers,
+          );
+          retryHeaders.remove('Content-Type');
+          retryReq.headers.addAll(retryHeaders);
+          if (fields != null) retryReq.fields.addAll(fields);
+          if (files != null) {
+            for (final entry in files.entries) {
+              if (await entry.value.exists()) {
+                retryReq.files.add(
+                  await http.MultipartFile.fromPath(
+                    entry.key,
+                    entry.value.path,
+                  ),
+                );
+              }
+            }
+          }
+          final retryStream =
+              await _client.send(retryReq).timeout(AppConstants.connectTimeout);
+          final retryResponse = await http.Response.fromStream(retryStream);
+          return _processResponse(retryResponse);
+        }
+      }
+
+      return _processResponse(response);
+    } on SocketException catch (e) {
+      _handleRequestError(e);
+    } catch (e) {
+      _handleRequestError(e);
+    }
+  }
+
   Never _handleRequestError(dynamic e) {
     if (e is ApiException) throw e;
 

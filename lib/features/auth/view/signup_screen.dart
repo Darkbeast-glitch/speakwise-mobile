@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
+import 'package:speakwise_mobile/core/config/app_constants.dart';
 import 'package:speakwise_mobile/core/services/api_client.dart';
 import 'package:speakwise_mobile/core/widgets/ambient_glow.dart';
 import 'package:speakwise_mobile/features/auth/data/auth_remote_datasource.dart';
@@ -425,7 +428,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
                 const SizedBox(height: 18),
 
-                // 6. Social Buttons (Disabled)
+                // 6. Social Buttons (Enabled)
                 Row(
                   children: [
                     SocialPillButton(
@@ -434,14 +437,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                         width: 22,
                         height: 22,
                       ),
-                      enabled: false,
-                      onTap: () => _onSocialDisabledTap('Google'),
+                      enabled: true,
+                      onTap: () => _launchOAuth('google'),
                     ),
                     const SizedBox(width: 14),
                     SocialPillButton(
                       icon: const GithubLogo(size: 22, color: Colors.black),
-                      enabled: false,
-                      onTap: () => _onSocialDisabledTap('GitHub'),
+                      enabled: true,
+                      onTap: () => _launchOAuth('github'),
                     ),
                   ],
                 ),
@@ -455,24 +458,57 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     );
   }
 
-  void _onSocialDisabledTap(String provider) {
+  Future<void> _launchOAuth(String provider) async {
     HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '$provider sign-in is currently disabled. Please use your email.',
-          style: AppTheme.font(
-            color: Colors.white,
-            fontSize: 13.5,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        backgroundColor: const Color(0xFF1E1F24),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
+    final lower = provider.toLowerCase();
+    String base = AppConstants.defaultApiUrl;
+    if (dotenv.isInitialized) {
+      final envUrl = dotenv.maybeGet('API_BASE_URL');
+      if (envUrl != null && envUrl.isNotEmpty) {
+        base = envUrl;
+      }
+    }
+    final baseUri = Uri.parse(base);
+    final path = baseUri.path.endsWith('/api')
+        ? '${baseUri.path}/users/auth/$lower-login/'
+        : '${baseUri.path.replaceAll(RegExp(r'/+$'), '')}/api/users/auth/$lower-login/';
+
+    final oauthUri = baseUri.replace(
+      path: path.replaceAll(RegExp(r'/+'), '/'),
+      queryParameters: {'platform': 'mobile'},
     );
+
+    try {
+      final launched = await launchUrl(
+        oauthUri,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not launch browser for $provider authentication.',
+              style: AppTheme.font(color: Colors.white, fontSize: 13),
+            ),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('OAuth launch error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to open $provider login: $e',
+              style: AppTheme.font(color: Colors.white, fontSize: 13),
+            ),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 }

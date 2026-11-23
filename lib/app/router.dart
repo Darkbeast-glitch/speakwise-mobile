@@ -72,6 +72,13 @@ final routerProvider = Provider<GoRouter>((ref) {
               return ForgotPasswordScreen(initialEmail: email);
             },
           ),
+          GoRoute(
+            path: 'callback',
+            builder: (context, state) {
+              final code = state.uri.queryParameters['code'] ?? '';
+              return OAuthCallbackScreen(code: code);
+            },
+          ),
         ],
       ),
       GoRoute(

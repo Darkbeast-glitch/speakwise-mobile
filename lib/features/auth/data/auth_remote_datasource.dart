@@ -126,6 +126,7 @@ abstract class AuthRemoteDataSource {
   });
   Future<void> logout();
   Future<bool> validateSession();
+  Future<AuthResponse> exchangeOAuthCode(String code);
 }
 
 class DjangoAuthRemoteDataSource implements AuthRemoteDataSource {
@@ -347,6 +348,48 @@ class DjangoAuthRemoteDataSource implements AuthRemoteDataSource {
       return true;
     }
     return true;
+  }
+
+  @override
+  Future<AuthResponse> exchangeOAuthCode(String code) async {
+    final response = await apiClient.post(
+      '/users/auth/oauth-token/',
+      authenticated: false,
+      body: {'code': code},
+    );
+    dynamic response;
+    try {
+      response = await apiClient.post(
+        '/users/auth/oauth/token/',
+        authenticated: false,
+        body: {'code': code},
+      );
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) {
+        response = await apiClient.post(
+          '/users/auth/oauth-token/',
+          authenticated: false,
+          body: {'code': code},
+        );
+      } else {
+        rethrow;
+      }
+    }
+
+    final auth = AuthResponse.fromJson(response as Map<String, dynamic>);
+
+    await storageService.setAuthToken(auth.accessToken);
+    await storageService.setRefreshToken(auth.refreshToken);
+    await storageService.setUserId(auth.id);
+    await storageService.setUserEmail(auth.email);
+    await storageService.setUsername(auth.username);
+    await storageService.setFirstName(auth.firstName);
+    await storageService.setLastName(auth.lastName);
+    if (auth.speakerId != null && auth.speakerId!.isNotEmpty) {
+      await storageService.setSpeakerId(auth.speakerId!);
+    }
+
+    return auth;
   }
 }
 

@@ -71,6 +71,12 @@ class StorageService {
     await _prefs.setString(AppConstants.keyNationality, nationality);
   }
 
+  String? get userAvatar => _prefs.getString(AppConstants.keyUserAvatar);
+
+  Future<void> setUserAvatar(String avatar) async {
+    await _prefs.setString(AppConstants.keyUserAvatar, avatar);
+  }
+
   String? get speakerSlug => _prefs.getString(AppConstants.keySpeakerSlug);
 
   Future<void> setSpeakerSlug(String speakerSlug) async {

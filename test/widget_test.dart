@@ -77,6 +77,11 @@ class _TestAuthRemoteDataSource implements AuthRemoteDataSource {
 
   @override
   Future<bool> validateSession() async => true;
+
+  @override
+  Future<AuthResponse> exchangeOAuthCode(String code) async {
+    return login(email: 'speaker@example.com', password: 'password');
+  }
 }
 
 class _TestEventsRepository implements EventsRepository {

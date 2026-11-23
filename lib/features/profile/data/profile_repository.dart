@@ -40,6 +40,7 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
       username: storageService.username ?? '',
       nationality: storageService.nationality ?? '',
       avatarPath: '',
+      avatarPath: storageService.userAvatar ?? '',
       organization: '',
       country: storageService.nationality ?? '',
       shortBio: '',
@@ -127,6 +128,12 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
     if (slugOrId != null && slugOrId.isNotEmpty) {
       try {
         final remoteProfile = await remoteDataSource.fetchSpeakerProfile(slugOrId);
+        if (remoteProfile.avatarPath.isNotEmpty) {
+          await storageService.setUserAvatar(remoteProfile.avatarPath);
+        }
+        if (remoteProfile.slug.isNotEmpty) {
+          await storageService.setSpeakerSlug(remoteProfile.slug);
+        }
         // Ensure authenticated user first/last name, email and username take precedence
         final resolvedProfile = remoteProfile.copyWith(
           firstName: storageService.firstName?.isNotEmpty == true
@@ -172,6 +179,20 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
     try {
       return await remoteDataSource.updateSpeakerProfile(updated);
     } catch (_) {
+      final saved = await remoteDataSource.updateSpeakerProfile(updated);
+      _currentProfile = saved;
+      if (saved.avatarPath.isNotEmpty) {
+        await storageService.setUserAvatar(saved.avatarPath);
+      }
+      if (saved.firstName.isNotEmpty) await storageService.setFirstName(saved.firstName);
+      if (saved.lastName.isNotEmpty) await storageService.setLastName(saved.lastName);
+      if (saved.username.isNotEmpty) await storageService.setUsername(saved.username);
+      if (saved.nationality.isNotEmpty) await storageService.setNationality(saved.nationality);
+      if (saved.slug.isNotEmpty) await storageService.setSpeakerSlug(saved.slug);
+      return saved;
+    } catch (e) {
+      debugPrint('Django update profile note: $e');
+      _currentProfile = updated;
       return _currentProfile;
     }
   }

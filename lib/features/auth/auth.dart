@@ -7,6 +7,7 @@ export 'view/login_screen.dart';
 export 'view/signup_screen.dart';
 export 'view/verify_otp_screen.dart';
 export 'view/forgot_password_screen.dart';
+export 'view/oauth_callback_screen.dart';
 
 // Widgets
 export 'view/widgets/auth_text_field.dart';

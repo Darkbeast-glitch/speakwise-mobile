@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
+import 'package:speakwise_mobile/core/config/app_constants.dart';
 import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/core/widgets/ambient_glow.dart';
 
@@ -149,48 +152,69 @@ class AuthGatewayScreen extends ConsumerWidget {
                               ),
                               child: InkWell(
                                 customBorder: const StadiumBorder(),
-                                onTap: () {
+                                onTap: () async {
                                   HapticFeedback.lightImpact();
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Google sign-in is currently disabled. Please continue with Email.',
-                                        style: AppTheme.font(
-                                          color: Colors.white,
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w600,
+                                  String base = AppConstants.defaultApiUrl;
+                                  if (dotenv.isInitialized) {
+                                    final envUrl =
+                                        dotenv.maybeGet('API_BASE_URL');
+                                    if (envUrl != null && envUrl.isNotEmpty) {
+                                      base = envUrl;
+                                    }
+                                  }
+                                  final baseUri = Uri.parse(base);
+                                  final path = baseUri.path.endsWith('/api')
+                                      ? '${baseUri.path}/users/auth/google-login/'
+                                      : '${baseUri.path.replaceAll(RegExp(r'/+$'), '')}/api/users/auth/google-login/';
+
+                                  final oauthUri = baseUri.replace(
+                                    path: path.replaceAll(RegExp(r'/+'), '/'),
+                                    queryParameters: {'platform': 'mobile'},
+                                  );
+
+                                  try {
+                                    final launched = await launchUrl(
+                                      oauthUri,
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                    if (!launched && context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Could not open Google authentication.',
+                                            style: AppTheme.font(
+                                                color: Colors.white,
+                                                fontSize: 13),
+                                          ),
+                                          backgroundColor: AppTheme.errorRed,
+                                          behavior: SnackBarBehavior.floating,
                                         ),
-                                      ),
-                                      backgroundColor: const Color(0xFF1E1F24),
-                                      behavior: SnackBarBehavior.floating,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    debugPrint('OAuth error: $e');
+                                  }
+                                },
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      'assets/images/googlelogo.png',
+                                      width: 20,
+                                      height: 20,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      'Continue with Google',
+                                      style: AppTheme.font(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: -0.1,
                                       ),
                                     ),
-                                  );
-                                },
-                                child: Opacity(
-                                  opacity: 0.45,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Image.asset(
-                                        'assets/images/googlelogo.png',
-                                        width: 20,
-                                        height: 20,
-                                      ),
-                                      const SizedBox(width: 10),
-                                      Text(
-                                        'Continue with Google',
-                                        style: AppTheme.font(
-                                          color: Colors.white70,
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          letterSpacing: -0.1,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                  ],
                                 ),
                               ),
                             ),

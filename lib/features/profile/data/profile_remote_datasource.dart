@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speakwise_mobile/core/services/api_client.dart';
 import 'package:speakwise_mobile/features/profile/data/models/user_profile_model.dart';
@@ -505,6 +507,109 @@ class DjangoProfileRemoteDataSource implements ProfileRemoteDataSource {
 
   @override
   Future<UserProfile> updateSpeakerProfile(UserProfile profile) async {
+    // 1. Update basic user details on Django (/users/me/)
+    try {
+      final userBody = <String, dynamic>{};
+      if (profile.firstName.isNotEmpty) userBody['first_name'] = profile.firstName;
+      if (profile.lastName.isNotEmpty) userBody['last_name'] = profile.lastName;
+      if (profile.nationality.isNotEmpty) userBody['nationality'] = profile.nationality;
+      if (profile.username.isNotEmpty) userBody['username'] = profile.username;
+
+      if (userBody.isNotEmpty) {
+        await apiClient.patch(
+          '/users/me/',
+          body: userBody,
+          authenticated: true,
+        );
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error updating /users/me/: $e');
+    }
+
+    // 2. Prepare fields for SpeakerProfile (/speakers/me/)
+    final fields = <String, String>{};
+    if (profile.organization.isNotEmpty) fields['organization'] = profile.organization;
+    if (profile.shortBio.isNotEmpty) fields['short_bio'] = profile.shortBio;
+    if (profile.biography.isNotEmpty) fields['long_bio'] = profile.biography;
+    if (profile.country.isNotEmpty) fields['country'] = profile.country;
+
+    // Check if a new avatar file was selected locally
+    final isLocalFile = profile.avatarPath.isNotEmpty &&
+        !profile.avatarPath.startsWith('http://') &&
+        !profile.avatarPath.startsWith('https://') &&
+        File(profile.avatarPath).existsSync();
+
+    Map<String, dynamic>? speakerData;
+
+    if (isLocalFile) {
+      final files = <String, File>{
+        'avatar': File(profile.avatarPath),
+      };
+      try {
+        final res = await apiClient.multipartRequest(
+          '/speakers/me/',
+          method: 'PATCH',
+          fields: fields,
+          files: files,
+          authenticated: true,
+        );
+        if (res is Map<String, dynamic>) speakerData = res;
+      } on ApiException catch (e) {
+        if (e.statusCode == 404 || e.statusCode == 405) {
+          try {
+            final res = await apiClient.multipartRequest(
+              '/speakers/',
+              method: 'POST',
+              fields: fields,
+              files: files,
+              authenticated: true,
+            );
+            if (res is Map<String, dynamic>) speakerData = res;
+          } catch (createErr) {
+            debugPrint('⚠️ Error creating speaker profile: $createErr');
+          }
+        } else {
+          debugPrint('⚠️ Error uploading speaker avatar: $e');
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error uploading speaker avatar: $e');
+      }
+    } else {
+      final speakerBody = <String, dynamic>{...fields};
+      try {
+        final res = await apiClient.patch(
+          '/speakers/me/',
+          body: speakerBody,
+          authenticated: true,
+        );
+        if (res is Map<String, dynamic>) speakerData = res;
+      } on ApiException catch (e) {
+        if (e.statusCode == 404 || e.statusCode == 405) {
+          try {
+            final res = await apiClient.post(
+              '/speakers/',
+              body: speakerBody,
+              authenticated: true,
+            );
+            if (res is Map<String, dynamic>) speakerData = res;
+          } catch (createErr) {
+            debugPrint('⚠️ Error creating speaker profile: $createErr');
+          }
+        }
+      } catch (e) {
+        debugPrint('⚠️ Error updating speaker profile: $e');
+      }
+    }
+
+    if (speakerData != null) {
+      final remoteAvatar = _sanitizeUrl(speakerData['avatar']?.toString());
+      final newSlug = speakerData['slug']?.toString() ?? profile.slug;
+      return profile.copyWith(
+        avatarPath: remoteAvatar.isNotEmpty ? remoteAvatar : profile.avatarPath,
+        slug: newSlug,
+      );
+    }
+
     return profile;
   }
 
