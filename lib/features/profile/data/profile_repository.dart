@@ -39,7 +39,6 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
       email: storageService.userEmail ?? '',
       username: storageService.username ?? '',
       nationality: storageService.nationality ?? '',
-      avatarPath: '',
       avatarPath: storageService.userAvatar ?? '',
       organization: '',
       country: storageService.nationality ?? '',
@@ -175,10 +174,7 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
 
   @override
   Future<UserProfile> updateProfile(UserProfile updated) async {
-    _currentProfile = updated;
     try {
-      return await remoteDataSource.updateSpeakerProfile(updated);
-    } catch (_) {
       final saved = await remoteDataSource.updateSpeakerProfile(updated);
       _currentProfile = saved;
       if (saved.avatarPath.isNotEmpty) {

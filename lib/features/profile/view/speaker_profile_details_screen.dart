@@ -463,6 +463,7 @@ class _SpeakerProfileDetailsScreenState
                                             widget.speakerId);
 
                                         // Inform backend
+                                        final messenger = ScaffoldMessenger.of(context);
                                         try {
                                           await ref
                                               .read(profileRepositoryProvider)
@@ -473,10 +474,8 @@ class _SpeakerProfileDetailsScreenState
                                         }
 
                                         if (mounted) {
-                                          ScaffoldMessenger.of(context)
-                                              .hideCurrentSnackBar();
-                                          ScaffoldMessenger.of(context)
-                                              .showSnackBar(
+                                          messenger.hideCurrentSnackBar();
+                                          messenger.showSnackBar(
                                             SnackBar(
                                               content: Row(
                                                 children: [
@@ -851,6 +850,7 @@ class _SpeakerProfileDetailsScreenState
                         onTap: () async {
                           HapticFeedback.lightImpact();
                           final storage = ref.read(storageServiceProvider);
+                          final messenger = ScaffoldMessenger.of(context);
                           final speakerKey = profile.slug.isNotEmpty
                               ? profile.slug
                               : (profile.id.isNotEmpty
@@ -860,8 +860,8 @@ class _SpeakerProfileDetailsScreenState
                               await storage.toggleFavoriteSpeaker(speakerKey);
                           setState(() => _isFavorited = isNowFav);
                           if (mounted) {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            messenger.hideCurrentSnackBar();
+                            messenger.showSnackBar(
                               SnackBar(
                                 content: Row(
                                   children: [

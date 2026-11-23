@@ -8,7 +8,7 @@ import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/core/widgets/user_avatar.dart';
 import 'package:speakwise_mobile/features/explore/data/events_repository.dart';
 import 'package:speakwise_mobile/features/explore/data/models/event_model.dart';
-import 'package:speakwise_mobile/features/explore/viewmodel/explore_viewmodel.dart';
+import 'package:speakwise_mobile/features/explore/viewmodel/explore_provider.dart';
 
 /// ═══════════════════════════════════════════════════════════════
 /// Bookmarks & Saved Shortlist Bottom Sheet
@@ -61,8 +61,14 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
       try {
         final repo = ref.read(eventsRepositoryProvider);
         final results = await Future.wait([
-          if (_allLoadedEvents.isEmpty) repo.getEvents(limit: 60) else Future.value(<EventItem>[]),
-          if (_allLoadedSpeakers.isEmpty) repo.getSpeakers(pageSize: 40) else Future.value(<EventSpeaker>[]),
+          if (_allLoadedEvents.isEmpty)
+            repo.getEvents(limit: 60)
+          else
+            Future.value(<EventItem>[]),
+          if (_allLoadedSpeakers.isEmpty)
+            repo.getSpeakers(pageSize: 40)
+          else
+            Future.value(<EventSpeaker>[]),
         ]);
 
         if (mounted) {
@@ -70,12 +76,14 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
             if (results[0].isNotEmpty) {
               final newEvents = results[0] as List<EventItem>;
               final existingIds = _allLoadedEvents.map((e) => e.id).toSet();
-              _allLoadedEvents.addAll(newEvents.where((e) => !existingIds.contains(e.id)));
+              _allLoadedEvents
+                  .addAll(newEvents.where((e) => !existingIds.contains(e.id)));
             }
             if (results.length > 1 && results[1].isNotEmpty) {
               final newSpeakers = results[1] as List<EventSpeaker>;
               final existingIds = _allLoadedSpeakers.map((s) => s.id).toSet();
-              _allLoadedSpeakers.addAll(newSpeakers.where((s) => !existingIds.contains(s.id)));
+              _allLoadedSpeakers.addAll(
+                  newSpeakers.where((s) => !existingIds.contains(s.id)));
             }
             _isLoadingExtra = false;
           });
@@ -109,14 +117,14 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
     // Filter matching events
     final savedEvents = _allLoadedEvents.where((e) {
       return bookmarkedIds.contains(e.id) ||
-          bookmarkedIds.contains(e.slug) ||
+          (e.slug != null && bookmarkedIds.contains(e.slug!)) ||
           bookmarkedIds.contains(e.title.toLowerCase().trim());
     }).toList();
 
     // Filter matching speakers
     final savedSpeakers = _allLoadedSpeakers.where((s) {
       return favoriteSpeakerKeys.contains(s.id) ||
-          (s.slug != null && favoriteSpeakerKeys.contains(s.slug)) ||
+          (s.slug != null && favoriteSpeakerKeys.contains(s.slug!)) ||
           favoriteSpeakerKeys.contains(s.name.toLowerCase().trim());
     }).toList();
 
@@ -340,7 +348,7 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       itemCount: events.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final event = events[index];
         return _buildEventCard(event);
@@ -373,14 +381,14 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
               child: SizedBox(
                 width: 76,
                 height: 76,
-                child: event.bannerImage.isNotEmpty
+                child: event.imagePath.isNotEmpty
                     ? CachedNetworkImage(
-                        imageUrl: event.bannerImage,
+                        imageUrl: event.imagePath,
                         fit: BoxFit.cover,
-                        placeholder: (_, __) => Container(
+                        placeholder: (_, _) => Container(
                           color: const Color(0xFF1F221A),
                         ),
-                        errorWidget: (_, __, ___) => Container(
+                        errorWidget: (_, _, _) => Container(
                           color: const Color(0xFF1F221A),
                           child: const Icon(
                             Icons.event_rounded,
@@ -421,11 +429,13 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
                   ),
                   const SizedBox(height: 4),
 
-                  // Organizer / Location
+                  // Location
                   Text(
-                    event.organizer.isNotEmpty
-                        ? event.organizer
-                        : (event.city.isNotEmpty ? '${event.city}, ${event.country}' : 'Global Event'),
+                    event.location.isNotEmpty
+                        ? event.location
+                        : (event.country != null && event.country!.isNotEmpty
+                            ? event.country!
+                            : 'Global Event'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTheme.font(
@@ -459,9 +469,7 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              event.formattedDateRange.isNotEmpty
-                                  ? event.formattedDateRange
-                                  : 'Upcoming',
+                              event.date.isNotEmpty ? event.date : 'Upcoming',
                               style: AppTheme.font(
                                 color: Colors.white70,
                                 fontSize: 11,
@@ -472,7 +480,7 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
                         ),
                       ),
 
-                      if (event.isCfpOpen) ...[
+                      if (event.cfpOpen) ...[
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -480,10 +488,12 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryAccent.withValues(alpha: 0.15),
+                            color:
+                                AppTheme.primaryAccent.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(
-                              color: AppTheme.primaryAccent.withValues(alpha: 0.4),
+                              color:
+                                  AppTheme.primaryAccent.withValues(alpha: 0.4),
                               width: 0.8,
                             ),
                           ),
@@ -528,7 +538,8 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
     );
   }
 
-  Widget _buildSpeakersTab(List<EventSpeaker> speakers, Set<String> favoriteKeys) {
+  Widget _buildSpeakersTab(
+      List<EventSpeaker> speakers, Set<String> favoriteKeys) {
     if (speakers.isEmpty && !_isLoadingExtra) {
       return _buildEmptyState(
         icon: Icons.people_outline_rounded,
@@ -541,7 +552,7 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
     return ListView.separated(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       itemCount: speakers.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final speaker = speakers[index];
         return _buildSpeakerCard(speaker);
@@ -602,7 +613,8 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
                           ),
                         ),
                       ),
-                      if (speaker.rankTier != null && speaker.rankTier!.isNotEmpty) ...[
+                      if (speaker.rankTier != null &&
+                          speaker.rankTier!.isNotEmpty) ...[
                         const SizedBox(width: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -610,7 +622,8 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
                             vertical: 1.5,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryAccent.withValues(alpha: 0.15),
+                            color:
+                                AppTheme.primaryAccent.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -626,11 +639,12 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
                     ],
                   ),
                   const SizedBox(height: 3),
-
                   Text(
                     speaker.role.isNotEmpty
                         ? speaker.role
-                        : (speaker.topic.isNotEmpty ? speaker.topic : 'Keynote Speaker'),
+                        : (speaker.topic.isNotEmpty
+                            ? speaker.topic
+                            : 'Keynote Speaker'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: AppTheme.font(
@@ -661,7 +675,8 @@ class _BookmarksSheetState extends ConsumerState<BookmarksSheet>
                       const SizedBox(width: 10),
                       Text(
                         '•',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.3)),
                       ),
                       const SizedBox(width: 10),
                       Text(

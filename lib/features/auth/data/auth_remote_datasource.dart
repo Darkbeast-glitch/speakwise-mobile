@@ -352,11 +352,6 @@ class DjangoAuthRemoteDataSource implements AuthRemoteDataSource {
 
   @override
   Future<AuthResponse> exchangeOAuthCode(String code) async {
-    final response = await apiClient.post(
-      '/users/auth/oauth-token/',
-      authenticated: false,
-      body: {'code': code},
-    );
     dynamic response;
     try {
       response = await apiClient.post(
