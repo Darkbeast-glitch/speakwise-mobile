@@ -252,6 +252,9 @@ class _SpeakerProfileDetailsScreenState
               _isFollowing = profile.isFollowing ||
                   storage.isSpeakerFollowed(widget.speakerId);
               _followersCount = profile.followersCount;
+              _isFavorited = storage.isSpeakerFavorited(profile.id) ||
+                  storage.isSpeakerFavorited(profile.slug) ||
+                  storage.isSpeakerFavorited(widget.speakerId);
               _hasSyncedFollowing = true;
             }
             final effectiveFollowersCount = _followersCount ?? profile.followersCount;
@@ -843,20 +846,73 @@ class _SpeakerProfileDetailsScreenState
 
                       const SizedBox(width: 12),
 
-                      // Heart/Favorite Circle Button
+                      // Heart/Favorite Circle Button (Save to Shortlist)
                       GestureDetector(
-                        onTap: () {
+                        onTap: () async {
                           HapticFeedback.lightImpact();
-                          setState(() => _isFavorited = !_isFavorited);
+                          final storage = ref.read(storageServiceProvider);
+                          final speakerKey = profile.slug.isNotEmpty
+                              ? profile.slug
+                              : (profile.id.isNotEmpty
+                                  ? profile.id
+                                  : widget.speakerId);
+                          final isNowFav =
+                              await storage.toggleFavoriteSpeaker(speakerKey);
+                          setState(() => _isFavorited = isNowFav);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    Icon(
+                                      isNowFav
+                                          ? Icons.favorite_rounded
+                                          : Icons.favorite_border_rounded,
+                                      color: isNowFav
+                                          ? const Color(0xFFFF4B6E)
+                                          : Colors.white,
+                                      size: 18,
+                                    ),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        isNowFav
+                                            ? 'Saved to your favorite speakers shortlist'
+                                            : 'Removed from favorite speakers',
+                                        style: AppTheme.font(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: const Color(0xFF1E2024),
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 2),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          }
                         },
-                        child: Container(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
                           width: 52,
                           height: 52,
                           decoration: BoxDecoration(
-                            color: const Color(0xFF141416),
+                            color: _isFavorited
+                                ? const Color(0xFFFF4B6E).withValues(alpha: 0.15)
+                                : const Color(0xFF141416),
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.12),
+                              color: _isFavorited
+                                  ? const Color(0xFFFF4B6E).withValues(alpha: 0.6)
+                                  : Colors.white.withValues(alpha: 0.12),
+                              width: 1.2,
                             ),
                           ),
                           child: Center(

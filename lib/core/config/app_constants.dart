@@ -20,6 +20,7 @@ class AppConstants {
   static const String keySpeakerSlug = 'speaker_slug';
   static const String keyIsGuest = 'is_guest';
   static const String keyBookmarkedEvents = 'bookmarked_events';
+  static const String keyFavoriteSpeakers = 'favorite_speakers';
   static const String keyFollowedSpeakers = 'followed_speakers';
 
   // API Config (Production SpeakWise Backend)

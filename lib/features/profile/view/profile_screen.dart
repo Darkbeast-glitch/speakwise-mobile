@@ -7,6 +7,7 @@ import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/core/widgets/widgets.dart';
 import 'package:speakwise_mobile/features/auth/auth.dart';
+import 'package:speakwise_mobile/features/explore/view/widgets/bookmarks_sheet.dart';
 import 'package:speakwise_mobile/features/profile/profile.dart';
 
 /// ═══════════════════════════════════════════════════════════════
@@ -657,6 +658,16 @@ class ProfileScreen extends ConsumerWidget {
                       title: 'Edit Profile & Details',
                       subtitle: 'Update name, organization, avatar & bio',
                       onTap: () => context.push('/profile/edit'),
+                    ),
+                    const SizedBox(height: 8),
+                    _settingsActionTile(
+                      icon: Icons.bookmark_border_rounded,
+                      title: 'Bookmarks & Shortlist',
+                      subtitle: 'Your saved events and favorite speakers',
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        BookmarksSheet.show(context);
+                      },
                     ),
                     const SizedBox(height: 8),
                     _settingsActionTile(

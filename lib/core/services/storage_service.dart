@@ -113,6 +113,25 @@ class StorageService {
     return isNowBookmarked;
   }
 
+  Set<String> get favoriteSpeakerIds =>
+      (_prefs.getStringList(AppConstants.keyFavoriteSpeakers) ?? []).toSet();
+
+  bool isSpeakerFavorited(String speakerId) =>
+      favoriteSpeakerIds.contains(speakerId);
+
+  Future<bool> toggleFavoriteSpeaker(String speakerId) async {
+    final current = favoriteSpeakerIds;
+    final isNowFavorited = !current.contains(speakerId);
+    if (isNowFavorited) {
+      current.add(speakerId);
+    } else {
+      current.remove(speakerId);
+    }
+    await _prefs.setStringList(
+        AppConstants.keyFavoriteSpeakers, current.toList());
+    return isNowFavorited;
+  }
+
   Set<String> get followedSpeakerIds =>
       (_prefs.getStringList(AppConstants.keyFollowedSpeakers) ?? []).toSet();
 

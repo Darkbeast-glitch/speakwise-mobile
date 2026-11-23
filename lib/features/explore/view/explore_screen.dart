@@ -110,10 +110,14 @@ class _ExploreScreenState extends ConsumerState<ExploreScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Header: Real User Avatar • "Welcome Back / [UserName]" • Bell
+                // 1. Header: Real User Avatar • "Welcome Back / [UserName]" • Bookmarks • Bell
                 ExploreHeader(
                   userName: userName,
                   avatarPath: userAvatar,
+                  onBookmarkTap: () {
+                    HapticFeedback.mediumImpact();
+                    BookmarksSheet.show(context);
+                  },
                   onNotificationTap: () {
                     HapticFeedback.mediumImpact();
                     NotificationsSheet.show(context);

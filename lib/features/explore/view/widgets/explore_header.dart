@@ -11,6 +11,7 @@ class ExploreHeader extends StatelessWidget {
   final String userName;
   final String? avatarPath;
   final VoidCallback? onNotificationTap;
+  final VoidCallback? onBookmarkTap;
   final VoidCallback? onAvatarTap;
 
   const ExploreHeader({
@@ -18,6 +19,7 @@ class ExploreHeader extends StatelessWidget {
     this.userName = 'Nana Acheampong',
     this.avatarPath,
     this.onNotificationTap,
+    this.onBookmarkTap,
     this.onAvatarTap,
   });
 
@@ -70,47 +72,82 @@ class ExploreHeader extends StatelessWidget {
             ],
           ),
 
-          // 3. Notification Bell Button
-          GestureDetector(
-            onTap: () {
-              HapticFeedback.lightImpact();
-              onNotificationTap?.call();
-            },
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: const Color(0xFF161616),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.08),
-                  width: 1,
-                ),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(
-                    Icons.notifications_none_rounded,
-                    color: AppTheme.primaryAccent,
-                    size: 22,
-                  ),
-                  Positioned(
-                    top: 10,
-                    right: 11,
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryAccent,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: const Color(0xFF161616), width: 1.2),
-                      ),
+          // 3. Actions: Bookmark + Notification Bell
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Bookmark Button
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  onBookmarkTap?.call();
+                },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161616),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      width: 1,
                     ),
                   ),
-                ],
+                  child: const Center(
+                    child: Icon(
+                      Icons.bookmark_border_rounded,
+                      color: AppTheme.primaryAccent,
+                      size: 21,
+                    ),
+                  ),
+                ),
               ),
-            ),
+
+              const SizedBox(width: 8),
+
+              // Notification Bell Button
+              GestureDetector(
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  onNotificationTap?.call();
+                },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF161616),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      width: 1,
+                    ),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      const Icon(
+                        Icons.notifications_none_rounded,
+                        color: AppTheme.primaryAccent,
+                        size: 22,
+                      ),
+                      Positioned(
+                        top: 10,
+                        right: 11,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryAccent,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: const Color(0xFF161616), width: 1.2),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
