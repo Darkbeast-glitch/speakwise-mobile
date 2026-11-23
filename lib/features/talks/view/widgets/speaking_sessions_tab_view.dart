@@ -7,7 +7,6 @@ import 'package:speakwise_mobile/features/talks/data/models/talk_model.dart';
 import 'package:speakwise_mobile/features/talks/view/widgets/add_talk_modal.dart';
 import 'package:speakwise_mobile/features/talks/view/widgets/talk_qr_code_modal.dart';
 import 'package:speakwise_mobile/features/talks/viewmodel/talks_provider.dart';
-import 'package:speakwise_mobile/features/talks/viewmodel/talks_state.dart';
 
 /// ═══════════════════════════════════════════════════════════════
 /// My Speaking Sessions Tab View
@@ -387,6 +386,29 @@ class SpeakingSessionsTabView extends ConsumerWidget {
                                 ),
                                 const SizedBox(width: 6),
                               ],
+                              // Edit Session Button
+                              GestureDetector(
+                                onTap: () {
+                                  HapticFeedback.lightImpact();
+                                  AddTalkModal.show(context, talkToEdit: talk);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.4),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white.withValues(alpha: 0.12),
+                                    ),
+                                  ),
+                                  child: const Icon(
+                                    Icons.edit_outlined,
+                                    color: Colors.white70,
+                                    size: 15,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
                               // Delete Session Button
                               GestureDetector(
                                 onTap: () => _confirmDeleteTalk(context, ref, talk),
@@ -577,6 +599,33 @@ class SpeakingSessionsTabView extends ConsumerWidget {
                               ),
                             ],
                           ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 8),
+
+                    // Edit Talk Button
+                    GestureDetector(
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        AddTalkModal.show(context, talkToEdit: talk);
+                      },
+                      child: Container(
+                        height: 42,
+                        width: 42,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF161811),
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.12),
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: const Icon(
+                          Icons.edit_outlined,
+                          color: AppTheme.textPrimary,
+                          size: 16,
                         ),
                       ),
                     ),

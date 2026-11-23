@@ -193,6 +193,66 @@ class TalksViewModel extends StateNotifier<TalksState> {
     return saved;
   }
 
+  Future<SpeakingTalk> updateTalk({
+    required String talkId,
+    required String eventName,
+    required String eventDate,
+    required String title,
+    required String description,
+    String? presentationUrl,
+    String? videoUrl,
+  }) async {
+    final existingIndex = state.talks.indexWhere((t) => t.id == talkId);
+    final existing = existingIndex != -1 ? state.talks[existingIndex] : null;
+
+    final updatedModel = (existing ??
+            SpeakingTalk(
+              id: talkId,
+              eventName: eventName,
+              eventDate: eventDate,
+              title: title,
+              description: description,
+              qrCodeUrl: 'https://speak-wise.live/rate/$talkId',
+              rating: 0.0,
+              reviewsCount: 0,
+              createdAt: DateTime.now(),
+            ))
+        .copyWith(
+      eventName: eventName,
+      eventDate: eventDate,
+      title: title,
+      description: description,
+      presentationUrl: presentationUrl,
+      videoUrl: videoUrl,
+    );
+
+    final saved = await _repository.updateSpeakingTalk(updatedModel);
+
+    final updatedTalks = state.talks.map((t) {
+      if (t.id == talkId) {
+        return saved.copyWith(
+          coverGradient: t.coverGradient,
+          rating: t.rating,
+          reviewsCount: t.reviewsCount,
+          isLive: t.isLive,
+          qrCodeUrl: t.qrCodeUrl.isNotEmpty ? t.qrCodeUrl : saved.qrCodeUrl,
+        );
+      }
+      return t;
+    }).toList();
+
+    state = state.copyWith(talks: updatedTalks);
+
+    // Update cache
+    _cacheManager.put(_cacheKey, {
+      'talks': updatedTalks.map((t) => t.toJson()).toList(),
+      'allReviews': state.allReviews.map((r) => r.toJson()).toList(),
+      'dimensionAnalysis': state.dimensionAnalysis.toJson(),
+    });
+
+    return saved;
+  }
+
   Future<bool> deleteTalk(String talkId) async {
     try {
       await _repository.deleteSpeakingTalk(talkId);

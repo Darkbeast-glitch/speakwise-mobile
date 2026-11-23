@@ -26,6 +26,15 @@ abstract class TalksRemoteDataSource {
     required int practicalRelevance,
     required String comments,
   });
+  Future<SpeakingTalk> updateSpeakerExperience({
+    required String talkId,
+    required String eventName,
+    required String eventDate,
+    required String topic,
+    required String description,
+    String? presentationLink,
+    String? videoLink,
+  });
   Future<void> deleteSpeakerExperience(String talkId);
 }
 
@@ -297,6 +306,81 @@ class DjangoTalksRemoteDataSource implements TalksRemoteDataSource {
       rating: 0.0,
       reviewsCount: 0,
       isLive: true,
+      coverGradient: _coverGradients[0],
+      createdAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<SpeakingTalk> updateSpeakerExperience({
+    required String talkId,
+    required String eventName,
+    required String eventDate,
+    required String topic,
+    required String description,
+    String? presentationLink,
+    String? videoLink,
+  }) async {
+    // Normalize date to YYYY-MM-DD for Django DateField
+    String normalizedDate = eventDate.trim();
+    if (normalizedDate.contains('/')) {
+      final parts = normalizedDate.split('/');
+      if (parts.length == 3 && parts[2].length == 4) {
+        normalizedDate =
+            '${parts[2]}-${parts[1].padLeft(2, '0')}-${parts[0].padLeft(2, '0')}';
+      }
+    }
+
+    final slugOrId = await resolveSpeakerSlugOrId();
+    final body = {
+      'event_name': eventName,
+      'event_date': normalizedDate,
+      'topic': topic,
+      'description': description,
+      if (presentationLink != null && presentationLink.isNotEmpty)
+        'presentation_link': presentationLink,
+      if (videoLink != null && videoLink.isNotEmpty)
+        'video_recording_link': videoLink,
+    };
+
+    dynamic response;
+    final candidateEndpoints = [
+      '/speakers/experiences/$talkId/',
+      if (slugOrId != null && slugOrId.isNotEmpty)
+        '/speakers/$slugOrId/experiences/$talkId/',
+      '/talks/$talkId/',
+    ];
+
+    for (final endpoint in candidateEndpoints) {
+      try {
+        response = await apiClient.patch(endpoint, body: body);
+        if (response != null) {
+          debugPrint('Successfully updated experience via $endpoint');
+          break;
+        }
+      } catch (e) {
+        debugPrint('Candidate update endpoint $endpoint failed: $e');
+      }
+    }
+
+    final json = response is Map<String, dynamic> ? response : null;
+    final slug = json?['feedback_slug']?.toString() ??
+        json?['slug']?.toString() ??
+        talkId;
+
+    return SpeakingTalk(
+      id: json?['id']?.toString() ?? talkId,
+      eventName: json?['event_name']?.toString() ?? eventName,
+      eventDate: json?['event_date']?.toString() ?? normalizedDate,
+      title: json?['topic']?.toString() ?? topic,
+      description: json?['description']?.toString() ?? description,
+      presentationUrl:
+          json?['presentation_link']?.toString() ?? presentationLink,
+      videoUrl: json?['video_recording_link']?.toString() ?? videoLink,
+      qrCodeUrl: 'https://speak-wise.live/rate/$slug',
+      rating: (json?['average_rating'] as num?)?.toDouble() ?? 0.0,
+      reviewsCount: (json?['reviews_count'] as num?)?.toInt() ?? 0,
+      isLive: json?['feedback_enabled'] != false,
       coverGradient: _coverGradients[0],
       createdAt: DateTime.now(),
     );

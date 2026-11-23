@@ -7,6 +7,7 @@ abstract class TalksRepository {
   Future<List<FeedbackReview>> getFeedbackReviews({String? talkId});
   Future<DimensionAnalysis> getDimensionAnalysis({String? talkId});
   Future<SpeakingTalk> addSpeakingTalk(SpeakingTalk talk);
+  Future<SpeakingTalk> updateSpeakingTalk(SpeakingTalk talk);
   Future<void> deleteSpeakingTalk(String talkId);
 }
 
@@ -208,6 +209,15 @@ class MockTalksRepository implements TalksRepository {
   }
 
   @override
+  Future<SpeakingTalk> updateSpeakingTalk(SpeakingTalk talk) async {
+    final idx = _talks.indexWhere((t) => t.id == talk.id);
+    if (idx != -1) {
+      _talks[idx] = talk;
+    }
+    return talk;
+  }
+
+  @override
   Future<void> deleteSpeakingTalk(String talkId) async {
     _talks.removeWhere((t) => t.id == talkId);
     _reviews.removeWhere((r) => r.talkId == talkId);
@@ -379,6 +389,19 @@ class DjangoTalksRepositoryImpl implements TalksRepository {
       topic: talk.title,
       description: talk.description,
       presentationLink: talk.presentationUrl,
+    );
+  }
+
+  @override
+  Future<SpeakingTalk> updateSpeakingTalk(SpeakingTalk talk) async {
+    return await remoteDataSource.updateSpeakerExperience(
+      talkId: talk.id,
+      eventName: talk.eventName,
+      eventDate: talk.eventDate,
+      topic: talk.title,
+      description: talk.description,
+      presentationLink: talk.presentationUrl,
+      videoLink: talk.videoUrl,
     );
   }
 

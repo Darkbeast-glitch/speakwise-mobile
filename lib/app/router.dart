@@ -25,9 +25,25 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: initialLocation,
     redirect: (context, state) {
+      final uri = state.uri;
+      final uriStr = uri.toString();
+
+      // Normalize deep links with custom scheme (e.g. speakwise://auth/callback?code=...)
+      if (uri.scheme == 'speakwise' ||
+          uri.host == 'auth' ||
+          uriStr.startsWith('speakwise:') ||
+          uriStr.contains('callback?code=')) {
+        final code = uri.queryParameters['code'] ?? '';
+        if (code.isNotEmpty) {
+          return '/auth/callback?code=$code';
+        }
+      }
+
       final isAuth = storage.isAuthenticated;
       final path = state.uri.path;
-      final isAuthRoute = path.startsWith('/auth') || path == '/onboarding';
+      final isAuthRoute = path.startsWith('/auth') ||
+          path.startsWith('/callback') ||
+          path == '/onboarding';
 
       // If user is already authenticated, keep them in /shell
       if (isAuth && isAuthRoute) {
@@ -41,7 +57,35 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       return null;
     },
+    errorBuilder: (context, state) {
+      final uri = state.uri;
+      final code = uri.queryParameters['code'] ?? '';
+      final loc = state.uri.toString();
+      if ((loc.contains('callback') || loc.contains('auth')) && code.isNotEmpty) {
+        return OAuthCallbackScreen(code: code);
+      }
+      if (loc.contains('/speakers/') || loc.contains('/speaker/')) {
+        final segments = uri.pathSegments;
+        if (segments.length >= 2) {
+          return SpeakerProfileDetailsScreen(speakerId: segments[1]);
+        }
+      }
+      if (loc.contains('/events/') || loc.contains('/event/')) {
+        final segments = uri.pathSegments;
+        if (segments.length >= 2) {
+          return EventDetailsScreen(eventId: segments[1]);
+        }
+      }
+      return const MainShellScreen(initialIndex: 0);
+    },
     routes: [
+      GoRoute(
+        path: '/callback',
+        builder: (context, state) {
+          final code = state.uri.queryParameters['code'] ?? '';
+          return OAuthCallbackScreen(code: code);
+        },
+      ),
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingScreen(),
@@ -105,6 +149,17 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/events/:id',
+        builder: (context, state) {
+          final eventId = state.pathParameters['id'] ?? 'pycon-gh-2027';
+          final initialEvent = state.extra is EventItem ? state.extra as EventItem : null;
+          return EventDetailsScreen(
+            eventId: eventId,
+            initialEvent: initialEvent,
+          );
+        },
+      ),
+      GoRoute(
         path: '/events/all',
         builder: (context, state) {
           final category = state.uri.queryParameters['category'] ?? 'all';
@@ -123,6 +178,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final filter = state.uri.queryParameters['filter'];
           return AllSpeakersScreen(initialFilter: filter);
+        },
+      ),
+      GoRoute(
+        path: '/speakers/:id',
+        builder: (context, state) {
+          final speakerId = state.pathParameters['id'] ?? 'juliusb';
+          return SpeakerProfileDetailsScreen(speakerId: speakerId);
         },
       ),
       GoRoute(

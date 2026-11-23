@@ -2,22 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
+import 'package:speakwise_mobile/features/talks/data/models/talk_model.dart';
 import 'package:speakwise_mobile/features/talks/view/widgets/talk_qr_code_modal.dart';
 import 'package:speakwise_mobile/features/talks/viewmodel/talks_provider.dart';
 
 /// ═══════════════════════════════════════════════════════════════
-/// Add Speaking Experience Form Modal
+/// Add / Edit Speaking Experience Form Modal
 /// Exact match of User Webapp Modal Reference (Image 2)
 /// ═══════════════════════════════════════════════════════════════
 class AddTalkModal extends ConsumerStatefulWidget {
-  const AddTalkModal({super.key});
+  final SpeakingTalk? talkToEdit;
 
-  static Future<void> show(BuildContext context) {
+  const AddTalkModal({super.key, this.talkToEdit});
+
+  static Future<void> show(BuildContext context, {SpeakingTalk? talkToEdit}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => const AddTalkModal(),
+      builder: (ctx) => AddTalkModal(talkToEdit: talkToEdit),
     );
   }
 
@@ -39,11 +42,21 @@ class _AddTalkModalState extends ConsumerState<AddTalkModal> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _eventDateController = TextEditingController(
-      text:
-          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
-    );
+    final talk = widget.talkToEdit;
+    if (talk != null) {
+      _eventNameController.text = talk.eventName;
+      _eventDateController = TextEditingController(text: talk.eventDate);
+      _titleController.text = talk.title;
+      _descriptionController.text = talk.description;
+      _presentationUrlController.text = talk.presentationUrl ?? '';
+      _videoUrlController.text = talk.videoUrl ?? '';
+    } else {
+      final now = DateTime.now();
+      _eventDateController = TextEditingController(
+        text:
+            '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}',
+      );
+    }
     // Listeners to live-update the Cover Preview
     _eventNameController.addListener(() => setState(() {}));
     _titleController.addListener(() => setState(() {}));
@@ -75,33 +88,73 @@ class _AddTalkModalState extends ConsumerState<AddTalkModal> {
       return;
     }
 
+    final isEditing = widget.talkToEdit != null;
     setState(() => _isSubmitting = true);
     HapticFeedback.mediumImpact();
 
-    final savedTalk = await ref.read(talksViewModelProvider.notifier).addTalk(
-          eventName: _eventNameController.text.trim(),
-          eventDate: _eventDateController.text.trim().isNotEmpty
-              ? _eventDateController.text.trim()
-              : '13/11/2026',
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim().isNotEmpty
-              ? _descriptionController.text.trim()
-              : 'Comprehensive technical presentation and interactive Q&A session.',
-          presentationUrl: _presentationUrlController.text.trim().isNotEmpty
-              ? _presentationUrlController.text.trim()
-              : null,
-          videoUrl: _videoUrlController.text.trim().isNotEmpty
-              ? _videoUrlController.text.trim()
-              : null,
+    if (isEditing) {
+      await ref.read(talksViewModelProvider.notifier).updateTalk(
+            talkId: widget.talkToEdit!.id,
+            eventName: _eventNameController.text.trim(),
+            eventDate: _eventDateController.text.trim().isNotEmpty
+                ? _eventDateController.text.trim()
+                : widget.talkToEdit!.eventDate,
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim().isNotEmpty
+                ? _descriptionController.text.trim()
+                : widget.talkToEdit!.description,
+            presentationUrl: _presentationUrlController.text.trim().isNotEmpty
+                ? _presentationUrlController.text.trim()
+                : null,
+            videoUrl: _videoUrlController.text.trim().isNotEmpty
+                ? _videoUrlController.text.trim()
+                : null,
+          );
+
+      setState(() => _isSubmitting = false);
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Talk updated successfully!',
+              style: AppTheme.font(
+                color: Colors.black,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            backgroundColor: AppTheme.primaryAccent,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
+      }
+    } else {
+      final savedTalk = await ref.read(talksViewModelProvider.notifier).addTalk(
+            eventName: _eventNameController.text.trim(),
+            eventDate: _eventDateController.text.trim().isNotEmpty
+                ? _eventDateController.text.trim()
+                : '13/11/2026',
+            title: _titleController.text.trim(),
+            description: _descriptionController.text.trim().isNotEmpty
+                ? _descriptionController.text.trim()
+                : 'Comprehensive technical presentation and interactive Q&A session.',
+            presentationUrl: _presentationUrlController.text.trim().isNotEmpty
+                ? _presentationUrlController.text.trim()
+                : null,
+            videoUrl: _videoUrlController.text.trim().isNotEmpty
+                ? _videoUrlController.text.trim()
+                : null,
+          );
 
-    setState(() => _isSubmitting = false);
+      setState(() => _isSubmitting = false);
 
-    if (mounted) {
-      Navigator.pop(context); // Close add form modal
+      if (mounted) {
+        Navigator.pop(context); // Close add form modal
 
-      // Promptly show the Generated Feedback QR Code modal for this new talk!
-      TalkQrCodeModal.show(context, savedTalk);
+        // Promptly show the Generated Feedback QR Code modal for this new talk!
+        TalkQrCodeModal.show(context, savedTalk);
+      }
     }
   }
 
@@ -141,7 +194,9 @@ class _AddTalkModalState extends ConsumerState<AddTalkModal> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Add Speaking Experience',
+                      widget.talkToEdit != null
+                          ? 'Edit Speaking Experience'
+                          : 'Add Speaking Experience',
                       style: AppTheme.font(
                         color: AppTheme.textPrimary,
                         fontSize: 18,
@@ -151,7 +206,9 @@ class _AddTalkModalState extends ConsumerState<AddTalkModal> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Share your conference talks and presentations with the community',
+                      widget.talkToEdit != null
+                          ? 'Update your session details and links'
+                          : 'Share your conference talks and presentations with the community',
                       style: AppTheme.font(
                         color: AppTheme.textMuted,
                         fontSize: 11.5,
@@ -315,7 +372,9 @@ class _AddTalkModalState extends ConsumerState<AddTalkModal> {
                                   const Icon(Icons.check_rounded, size: 20),
                                   const SizedBox(width: 8),
                                   Text(
-                                    'Save Speaking Experience',
+                                    widget.talkToEdit != null
+                                        ? 'Save Changes'
+                                        : 'Save Speaking Experience',
                                     style: AppTheme.font(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w800,

@@ -267,7 +267,7 @@ class _NotificationsSheetState extends ConsumerState<NotificationsSheet> {
     }
 
     if (item.route != null && item.route!.isNotEmpty) {
-      final route = item.route!.trim();
+      String route = item.route!.trim();
       if (!mounted) return;
       Navigator.pop(context);
       if (route.startsWith('http://') || route.startsWith('https://')) {
@@ -276,7 +276,14 @@ class _NotificationsSheetState extends ConsumerState<NotificationsSheet> {
           launchUrl(uri, mode: LaunchMode.externalApplication);
         }
       } else {
-        context.push(route);
+        if (!route.startsWith('/')) {
+          route = '/$route';
+        }
+        try {
+          context.push(route);
+        } catch (e) {
+          debugPrint('Notification navigation error for $route: $e');
+        }
       }
     }
   }
@@ -501,7 +508,7 @@ class _NotificationsSheetState extends ConsumerState<NotificationsSheet> {
                 : ListView.separated(
                     physics: const BouncingScrollPhysics(),
                     itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, index) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final item = filtered[index];
                       return GestureDetector(
