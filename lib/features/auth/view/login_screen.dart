@@ -67,7 +67,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       try {
         await ref.read(cacheManagerProvider).remove('user_profile_cache');
         await ref.read(profileViewModelProvider.notifier).reset();
-        await ref.read(profileViewModelProvider.notifier).loadProfile(force: true);
+        await ref
+            .read(profileViewModelProvider.notifier)
+            .loadProfile(force: true);
       } catch (_) {}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

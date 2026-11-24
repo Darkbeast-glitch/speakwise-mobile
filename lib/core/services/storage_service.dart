@@ -113,7 +113,9 @@ class StorageService {
       current.remove(eventId);
     }
     await _prefs.setStringList(
-        AppConstants.keyBookmarkedEvents, current.toList());
+      AppConstants.keyBookmarkedEvents,
+      current.toList(),
+    );
     return isNowBookmarked;
   }
 
@@ -132,7 +134,9 @@ class StorageService {
       current.remove(speakerId);
     }
     await _prefs.setStringList(
-        AppConstants.keyFavoriteSpeakers, current.toList());
+      AppConstants.keyFavoriteSpeakers,
+      current.toList(),
+    );
     return isNowFavorited;
   }
 
@@ -151,7 +155,9 @@ class StorageService {
       current.remove(speakerId);
     }
     await _prefs.setStringList(
-        AppConstants.keyFollowedSpeakers, current.toList());
+      AppConstants.keyFollowedSpeakers,
+      current.toList(),
+    );
     return isNowFollowed;
   }
 

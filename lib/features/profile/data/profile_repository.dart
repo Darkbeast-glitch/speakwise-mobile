@@ -87,7 +87,8 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
 
     // 2. Fetch authenticated user details from /users/me/
     Map<String, dynamic>? currentUserData;
-    if (storageService.authToken != null && storageService.authToken!.isNotEmpty) {
+    if (storageService.authToken != null &&
+        storageService.authToken!.isNotEmpty) {
       try {
         currentUserData = await remoteDataSource.fetchCurrentUser();
         if (currentUserData != null) {
@@ -95,22 +96,34 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
             await storageService.setUserId(currentUserData['id'].toString());
           }
           if (currentUserData['email'] != null) {
-            await storageService.setUserEmail(currentUserData['email'].toString());
+            await storageService.setUserEmail(
+              currentUserData['email'].toString(),
+            );
           }
           if (currentUserData['username'] != null) {
-            await storageService.setUsername(currentUserData['username'].toString());
+            await storageService.setUsername(
+              currentUserData['username'].toString(),
+            );
           }
           if (currentUserData['first_name'] != null) {
-            await storageService.setFirstName(currentUserData['first_name'].toString());
+            await storageService.setFirstName(
+              currentUserData['first_name'].toString(),
+            );
           }
           if (currentUserData['last_name'] != null) {
-            await storageService.setLastName(currentUserData['last_name'].toString());
+            await storageService.setLastName(
+              currentUserData['last_name'].toString(),
+            );
           }
           if (currentUserData['nationality'] != null) {
-            await storageService.setNationality(currentUserData['nationality'].toString());
+            await storageService.setNationality(
+              currentUserData['nationality'].toString(),
+            );
           }
           if (currentUserData['speaker_id'] != null) {
-            await storageService.setSpeakerId(currentUserData['speaker_id'].toString());
+            await storageService.setSpeakerId(
+              currentUserData['speaker_id'].toString(),
+            );
           }
         }
       } catch (e) {
@@ -118,7 +131,8 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
       }
     }
 
-    final slugOrId = currentUserData?['speaker_slug']?.toString() ??
+    final slugOrId =
+        currentUserData?['speaker_slug']?.toString() ??
         currentUserData?['speaker_id']?.toString() ??
         storageService.speakerSlug ??
         storageService.speakerId ??
@@ -126,7 +140,9 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
 
     if (slugOrId != null && slugOrId.isNotEmpty) {
       try {
-        final remoteProfile = await remoteDataSource.fetchSpeakerProfile(slugOrId);
+        final remoteProfile = await remoteDataSource.fetchSpeakerProfile(
+          slugOrId,
+        );
         await storageService.setUserAvatar(remoteProfile.avatarPath);
         if (remoteProfile.slug.isNotEmpty) {
           await storageService.setSpeakerSlug(remoteProfile.slug);
@@ -153,7 +169,9 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
         _currentProfile = resolvedProfile;
         return resolvedProfile;
       } catch (e) {
-        debugPrint('Django speaker profile fetch note: $e. Using local user profile.');
+        debugPrint(
+          'Django speaker profile fetch note: $e. Using local user profile.',
+        );
       }
     }
 
@@ -179,11 +197,16 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
       if (saved.avatarPath.isNotEmpty) {
         await storageService.setUserAvatar(saved.avatarPath);
       }
-      if (saved.firstName.isNotEmpty) await storageService.setFirstName(saved.firstName);
-      if (saved.lastName.isNotEmpty) await storageService.setLastName(saved.lastName);
-      if (saved.username.isNotEmpty) await storageService.setUsername(saved.username);
-      if (saved.nationality.isNotEmpty) await storageService.setNationality(saved.nationality);
-      if (saved.slug.isNotEmpty) await storageService.setSpeakerSlug(saved.slug);
+      if (saved.firstName.isNotEmpty)
+        await storageService.setFirstName(saved.firstName);
+      if (saved.lastName.isNotEmpty)
+        await storageService.setLastName(saved.lastName);
+      if (saved.username.isNotEmpty)
+        await storageService.setUsername(saved.username);
+      if (saved.nationality.isNotEmpty)
+        await storageService.setNationality(saved.nationality);
+      if (saved.slug.isNotEmpty)
+        await storageService.setSpeakerSlug(saved.slug);
       return saved;
     } catch (e) {
       debugPrint('Django update profile note: $e');
