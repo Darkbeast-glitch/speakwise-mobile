@@ -8,6 +8,7 @@ import 'package:speakwise_mobile/app/app_theme.dart';
 import 'package:speakwise_mobile/app/router.dart';
 import 'package:speakwise_mobile/core/config/app_constants.dart';
 import 'package:speakwise_mobile/core/services/api_client.dart';
+import 'package:speakwise_mobile/core/services/cache_manager.dart';
 import 'package:speakwise_mobile/core/widgets/widgets.dart';
 import 'package:speakwise_mobile/features/auth/auth.dart';
 import 'package:speakwise_mobile/features/profile/profile.dart';
@@ -62,9 +63,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref
           .read(authRemoteDataSourceProvider)
           .login(email: email, password: password);
-      // Immediately load the fresh profile for the logged in user
+      // Immediately clear old cached profile and load fresh profile for the logged in user
       try {
-        await ref.read(profileViewModelProvider.notifier).loadProfile();
+        await ref.read(cacheManagerProvider).remove('user_profile_cache');
+        await ref.read(profileViewModelProvider.notifier).reset();
+        await ref.read(profileViewModelProvider.notifier).loadProfile(force: true);
       } catch (_) {}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

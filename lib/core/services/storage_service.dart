@@ -74,7 +74,11 @@ class StorageService {
   String? get userAvatar => _prefs.getString(AppConstants.keyUserAvatar);
 
   Future<void> setUserAvatar(String avatar) async {
-    await _prefs.setString(AppConstants.keyUserAvatar, avatar);
+    if (avatar.trim().isEmpty) {
+      await _prefs.remove(AppConstants.keyUserAvatar);
+    } else {
+      await _prefs.setString(AppConstants.keyUserAvatar, avatar.trim());
+    }
   }
 
   String? get speakerSlug => _prefs.getString(AppConstants.keySpeakerSlug);
@@ -161,6 +165,7 @@ class StorageService {
     await _prefs.remove(AppConstants.keyFirstName);
     await _prefs.remove(AppConstants.keyLastName);
     await _prefs.remove(AppConstants.keyNationality);
+    await _prefs.remove(AppConstants.keyUserAvatar);
     await _prefs.remove(AppConstants.keySpeakerSlug);
     await _prefs.setBool(AppConstants.keyIsGuest, false);
   }

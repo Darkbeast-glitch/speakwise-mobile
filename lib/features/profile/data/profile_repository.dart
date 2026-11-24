@@ -127,14 +127,13 @@ class DjangoProfileRepositoryImpl implements ProfileRepository {
     if (slugOrId != null && slugOrId.isNotEmpty) {
       try {
         final remoteProfile = await remoteDataSource.fetchSpeakerProfile(slugOrId);
-        if (remoteProfile.avatarPath.isNotEmpty) {
-          await storageService.setUserAvatar(remoteProfile.avatarPath);
-        }
+        await storageService.setUserAvatar(remoteProfile.avatarPath);
         if (remoteProfile.slug.isNotEmpty) {
           await storageService.setSpeakerSlug(remoteProfile.slug);
         }
         // Ensure authenticated user first/last name, email and username take precedence
         final resolvedProfile = remoteProfile.copyWith(
+          avatarPath: remoteProfile.avatarPath,
           firstName: storageService.firstName?.isNotEmpty == true
               ? storageService.firstName
               : remoteProfile.firstName,

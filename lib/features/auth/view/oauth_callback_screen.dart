@@ -3,8 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
+import 'package:speakwise_mobile/core/services/cache_manager.dart';
 import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/features/auth/data/auth_remote_datasource.dart';
+import 'package:speakwise_mobile/features/profile/viewmodel/profile_provider.dart';
 
 /// ═══════════════════════════════════════════════════════════════
 /// Screen: OAuth Callback Screen
@@ -66,6 +68,15 @@ class _OAuthCallbackScreenState extends ConsumerState<OAuthCallbackScreen> {
 
       final storage = ref.read(storageServiceProvider);
       await storage.setHasSeenOnboarding(true);
+
+      // Reset cache and force refresh profile so stale previous user data never persists
+      try {
+        await ref.read(cacheManagerProvider).clearAll();
+        await ref.read(profileViewModelProvider.notifier).reset();
+        await ref.read(profileViewModelProvider.notifier).loadProfile(force: true);
+      } catch (e) {
+        debugPrint('Profile refresh on OAuth notice: $e');
+      }
 
       if (mounted) {
         HapticFeedback.mediumImpact();

@@ -170,4 +170,31 @@ class ProfileViewModel extends StateNotifier<ProfileState> {
     final updatedSkills = state.profile.skills.where((s) => s != skill).toList();
     updateProfile(skills: updatedSkills);
   }
+
+  /// Clears in-memory profile and cached profile on disk
+  Future<void> reset() async {
+    await _cacheManager.remove(_cacheKey);
+    state = ProfileState(
+      status: ProfileStatus.loading,
+      profile: const UserProfile(
+        firstName: '',
+        lastName: '',
+        email: '',
+        username: '',
+        nationality: '',
+        avatarPath: '',
+        organization: '',
+        country: '',
+        shortBio: '',
+        biography: '',
+        socialLinks: {},
+        skills: [],
+        badges: [],
+        talksGiven: 0,
+        attendeesCount: 0,
+        positivePercentage: 0,
+        averageRating: 0,
+      ),
+    );
+  }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:speakwise_mobile/app/router.dart';
 import 'package:speakwise_mobile/app/app_theme.dart';
+import 'package:speakwise_mobile/core/services/cache_manager.dart';
 import 'package:speakwise_mobile/core/services/storage_service.dart';
 import 'package:speakwise_mobile/core/widgets/widgets.dart';
 import 'package:speakwise_mobile/features/auth/auth.dart';
@@ -1067,6 +1068,10 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(ctx);
               await ref.read(authRemoteDataSourceProvider).logout();
+              await ref.read(cacheManagerProvider).clearAll();
+              await ref.read(profileViewModelProvider.notifier).reset();
+              ref.invalidate(profileRepositoryProvider);
+              ref.invalidate(profileViewModelProvider);
               ref.invalidate(routerProvider);
               if (context.mounted) {
                 context.go('/auth');
